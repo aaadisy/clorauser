@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "721364112038",
+    "project_id": "clora-14625",
+    "storage_bucket": "clora-14625.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721364112038:android:19c283ce95d0fb5fcdda67",
+        "android_client_info": {
+          "package_name": "com.autumn.clora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjXJNcyMR0ufzqAoqcfRyXsBaDn-tqj-E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

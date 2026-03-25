@@ -1,0 +1,2 @@
+D:/dev/live/clora_user_paid_v/android/app/.cxx/Debug/154w244r/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/dev/live/clora_user_paid_v/android/app/.cxx/Debug/154w244r/armeabi-v7a/CMakeFiles/rebuild_cache.dir

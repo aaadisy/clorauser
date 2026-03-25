@@ -1,0 +1,114 @@
+<svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        :root {
+            --color1: #f29eac; 
+            --color2: #d9aff2; 
+            --color3: #f2c7a0; 
+            --color4: #9ec8d9; 
+            --color5: #f2e1e6; 
+            --accent: #ffc0cb;
+        }
+
+        .bg {
+            fill: var(--color5);
+        }
+
+        .canvas {
+            filter: blur(100px);
+            animation: global-rotate 15s linear infinite;
+            transform-origin: center;
+        }
+
+        .blob {
+            opacity: 0.8;
+            mix-blend-mode: multiply;
+            transform-origin: center;
+        }
+
+        .blob-1 {
+            fill: url(#grad1);
+            animation: orbit-1 11s linear infinite;
+        }
+
+        .blob-2 {
+            fill: url(#grad2);
+            animation: orbit-2 13s linear infinite;
+        }
+
+        .blob-3 {
+            fill: url(#grad3);
+            animation: orbit-3 17s linear infinite;
+        }
+
+        .blob-4 {
+            fill: url(#grad4);
+            animation: orbit-1 19s linear infinite reverse;
+        }
+
+        .blob-5 {
+            fill: url(#grad5);
+            animation: orbit-2 23s linear infinite reverse;
+        }
+
+        .overlay {
+            fill: rgba(255, 255, 255, 0.05);
+            backdrop-filter: brightness(1.05) contrast(1.05);
+        }
+
+        @keyframes global-rotate {
+            from { transform: rotate(0deg) scale(1.2); }
+            to { transform: rotate(360deg) scale(1.2); }
+        }
+
+        @keyframes orbit-1 {
+            from { transform: rotate(0deg) translate(100px) rotate(0deg); }
+            to { transform: rotate(360deg) translate(100px) rotate(-360deg); }
+        }
+
+        @keyframes orbit-2 {
+            from { transform: rotate(0deg) translate(-150px) rotate(0deg); }
+            to { transform: rotate(360deg) translate(-150px) rotate(-360deg); }
+        }
+
+        @keyframes orbit-3 {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+    </style>
+
+    <defs>
+        <radialGradient id="grad1" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#f29eac" />
+            <stop offset="70%" stop-color="#f29eac" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="grad2" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#d9aff2" />
+            <stop offset="70%" stop-color="#d9aff2" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="grad3" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#f2c7a0" />
+            <stop offset="70%" stop-color="#f2c7a0" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="grad4" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#9ec8d9" />
+            <stop offset="70%" stop-color="#9ec8d9" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="grad5" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffc0cb" />
+            <stop offset="70%" stop-color="#ffc0cb" stop-opacity="0" />
+        </radialGradient>
+    </defs>
+
+    <rect class="bg" width="1000" height="1000" />
+    
+    <g class="canvas">
+        <circle class="blob blob-1" cx="300" cy="300" r="400" />
+        <circle class="blob blob-2" cx="700" cy="800" r="350" />
+        <circle class="blob blob-3" cx="500" cy="500" r="300" />
+        <circle class="blob blob-4" cx="800" cy="200" r="250" />
+        <circle class="blob blob-5" cx="200" cy="800" r="300" />
+    </g>
+
+    <rect class="overlay" width="1000" height="1000" />
+</svg>

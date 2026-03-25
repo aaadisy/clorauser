@@ -1,0 +1,22 @@
+-dontwarn android.window.BackEvent
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivity$g
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Args
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Error
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter
+-dontwarn com.stripe.android.pushProvisioning.PushProvisioningEphemeralKeyProvider
+-dontwarn proguard.annotation.Keep
+-dontwarn proguard.annotation.KeepClassMembers
+-keep class com.paytm.pgsdk.model.ProcessTransactionInfo { *; }
+-keep class com.paytm.pgsdk.model.Body { *; }
+-keep class com.braintreepayments.api.** { *; }
+-keep interface com.braintreepayments.api.** { *; }
+-dontwarn com.braintreepayments.api.**
+-keep class com.braintreepayments.api.internal.* { *; }
+-keep class com.cardinalcommerce.** { *; }
+-dontwarn com.cardinalcommerce.**
+-keep class com.paypal.** { *; }
+-dontwarn com.paypal.**
+-keep class com.venmo.** { *; }
+-dontwarn com.venmo.**
+-dontwarn com.facebook.infer.annotation.Nullsafe$Mode
+-dontwarn com.facebook.infer.annotation.Nullsafe
