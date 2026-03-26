@@ -22,6 +22,7 @@ Map<String, String> buildHeaderTokens() {
   };
 
   if (userStore.isLoggedIn) {
+    log('\u001B[33m[AUTH_DEBUG] Reading userStore.token for headers: ${userStore.token}\u001B[39m'); // <-- ADDED LOG
     header.putIfAbsent(
         HttpHeaders.authorizationHeader, () => 'Bearer ${userStore.token}');
   }

@@ -14,7 +14,6 @@ export 'user/period_prediction_screen.dart';
 export 'user/podcast_screen.dart';
 export 'user/policy_screen.dart';
 export 'user/privacy_policy_screen.dart';
-export 'user/progress_screen.dart';
 export 'user/secure_access__options_screen.dart';
 export 'user/user _setting_screen.dart';
 export 'user/sign_up_screen.dart';

@@ -100,7 +100,7 @@ class _PolicyScreenState extends State<PolicyScreen> {
             onTap: selectList.length > 2
                 ? () {
                     setValue(IS_FIRST_TIME, true);
-                    FuStyleQuestionScreen().launch(context);
+                    AiOnboardingScreen().launch(context);
                   }
                 : () {},
           ),

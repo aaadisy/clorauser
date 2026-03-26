@@ -40,7 +40,7 @@ dependencies:
 
   #Storage
   shared_preferences: ^2.2.3
-
+  sms_autofill: ^2.3.0
   # Firebase
   firebase_analytics: ^11.2.0
   firebase_auth: ^5.5.3
@@ -171,6 +171,12 @@ flutter:
     - assets/images/clo.jpg
     - assets/images/clo.mp4
     - assets/images/gradient_animation.svg
+    - assets/clorasplash/hormonal.png
+    - assets/clorasplash/menopause.png
+    - assets/clorasplash/menstruation.png
+    - assets/clorasplash/pcos.png
+    - assets/clorasplash/pms.png
+    - assets/clorasplash/pregnancy.png
 
 flutter_native_splash:
   color: "#FFFFFF"

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../extensions/new_colors.dart';
 import '../main.dart' as MenstrualCycleWidget;
+import '../utils/app_constants.dart';
 
 class AiDashboardScreen extends StatefulWidget {
   @override
@@ -37,31 +38,6 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
     init();
   }
 
-  /*Future<String> getSetInfo(String key) async {
-    final instance = MenstrualCycleWidget.instance;
-
-    String upperCaseString=key.toUpperCase();
-
-    if (upperCaseString=='#LAST_DATE_OF_PERIODS') {
-      return await instance.getPreviousPeriodDay();
-
-    }else if(upperCaseString=='#AVERAGE_PERIOD_LENGTH'){
-      return await instance.getAvgCycleLength().toString();
-
-    }else if(upperCaseString=='#LAST_4_5_CYCLE LENGTH'){
-      return '';
-
-    }else if(upperCaseString=='#PHASE_NAME'){
-      return await instance.getCurrentPhaseName();
-
-    }else if(upperCaseString=='#COMMON_SYMPTOMS_OF_CURRENT_PHASE'){
-      return '';
-
-    }else{
-      return '';
-    }
-  }*/
-
   Future<void> getSetInfo() async {
     final instance = MenstrualCycleWidget.instance;
     LAST_DATE_OF_PERIODS = await instance.getPreviousPeriodDay();
@@ -71,15 +47,21 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
   }
 
   init() async {
+    // Check if userStore is initialized and has user data before formatting strings
+    final user = MenstrualCycleWidget.userStore.user;
+    final lastPeriod = LAST_DATE_OF_PERIODS ?? 'unknown';
+    final avgCycle = AVERAGE_PERIOD_LENGTH ?? 'unknown';
+    final phase = PHASE_NAME ?? 'current';
+
     questionFirst = [
       Questionmodel(
           text: 'When is my next period likely to start?',
           askAi:
-              'Given that my last period started on ${LAST_DATE_OF_PERIODS} and my average cycle length is ${AVERAGE_PERIOD_LENGTH} days. When is my next period likely to start?'),
+              'Given that my last period started on ${lastPeriod} and my average cycle length is ${avgCycle} days. When is my next period likely to start?'),
       Questionmodel(
           text: 'Can you predict my ovulation window?',
           askAi:
-              'Given that my last period started on ${LAST_DATE_OF_PERIODS} and my average cycle length is ${AVERAGE_PERIOD_LENGTH} days. Can you predict my ovulation window?'),
+              'Given that my last period started on ${lastPeriod} and my average cycle length is ${avgCycle} days. Can you predict my ovulation window?'),
       Questionmodel(
           text: 'Is my cycle irregular, and if so, what could be the cause?',
           askAi:
@@ -90,7 +72,7 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
       Questionmodel(
           text: 'What are the signs and symptoms of ovulation?',
           askAi:
-              'Given that my last period started on ${LAST_DATE_OF_PERIODS} and my average cycle length is ${AVERAGE_PERIOD_LENGTH} days. What are the signs and symptoms of ovulation?'),
+              'Given that my last period started on ${lastPeriod} and my average cycle length is ${avgCycle} days. What are the signs and symptoms of ovulation?'),
       Questionmodel(
           text: 'How do I read an ovulation test result?',
           askAi: 'How do I read an ovulation test result?'),
@@ -110,10 +92,10 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
       Questionmodel(
           text: 'What symptoms are common during my current cycle phase?',
           askAi:
-              'Given that my last period started on ${LAST_DATE_OF_PERIODS} and my average cycle length is ${AVERAGE_PERIOD_LENGTH} days. When is my next period likely to start?'),
+              'Given that my last period started on ${lastPeriod} and my average cycle length is ${avgCycle} days. When is my next period likely to start?'),
       Questionmodel(
-          text: 'Can you suggest remedies for my ${PHASE_NAME} cramps?',
-          askAi: 'Can you suggest remedies for my ${PHASE_NAME} cramps?'),
+          text: 'Can you suggest remedies for my ${phase} cramps?',
+          askAi: 'Can you suggest remedies for my ${phase} cramps?'),
       Questionmodel(
           text: 'How can I manage my PMS symptoms better?',
           askAi: 'How can I manage my PMS symptoms better?'),
@@ -122,15 +104,15 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
       Questionmodel(
           text: 'What are my most fertile days this cycle?',
           askAi:
-              'Given that my last period started on ${LAST_DATE_OF_PERIODS}  and my average cycle length is ${AVERAGE_PERIOD_LENGTH} days. What are my most fertile days this cycle?'),
+              'Given that my last period started on ${lastPeriod}  and my average cycle length is ${avgCycle} days. What are my most fertile days this cycle?'),
       Questionmodel(
           text: 'What are the chances of conception based on my cycle data?',
           askAi:
-              ' Given that my last period started on ${LAST_DATE_OF_PERIODS}  and my average cycle length is ${AVERAGE_PERIOD_LENGTH} days. What are the chances of conception based on my cycle data?'),
+              ' Given that my last period started on ${lastPeriod}  and my average cycle length is ${avgCycle} days. What are the chances of conception based on my cycle data?'),
       Questionmodel(
           text: 'How can I track my cervical mucus changes?',
           askAi:
-              'Given that my last period started on ${LAST_DATE_OF_PERIODS}  and my average cycle length is ${AVERAGE_PERIOD_LENGTH} days. How can I track my cervical mucus changes?'),
+              'Given that my last period started on ${lastPeriod}  and my average cycle length is ${avgCycle} days. How can I track my cervical mucus changes?'),
     ];
     questionFour = [
       Questionmodel(
@@ -177,19 +159,13 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure user data is loaded before building UI that relies on it
+    if (MenstrualCycleWidget.userStore.user == null) {
+      return Scaffold(body: Center(child: Text("Loading User Data...", style: TextStyle(color: Colors.white))));
+    }
+
     return Scaffold(
       backgroundColor: bgColor,
-      // appBar: appBarWidget(
-      //   'Era Ai',
-      //   titleTextStyle: boldTextStyle(
-      //       size: textFontSize_18, isHeader: true, color: scaffoldDarkColor),
-      //   elevation: 1,
-      //   textColor: textPrimaryColorGlobal,
-      //   showBack: true,
-      //   context1: context,
-      //   titleSpace: 0,
-      //   color: Color(0xFFf8f8f8),
-      // ),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -242,8 +218,7 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: MenstrualCycleWidget
-                                      .userStore.user!.firstName,
+                                  text: MenstrualCycleWidget.userStore.user!.firstName,
                                   style: boldTextStyle(
                                     size: 18,
                                     weight: FontWeight.w400,
@@ -294,8 +269,7 @@ class _AiDashboardScreenState extends State<AiDashboardScreen> {
                               )),
                           20.height,
                           InfoCard(
-                            description:
-                                'Cycle Tracking and Prediction Questions',
+                            description: 'Cycle Tracking and Prediction Questions',
                             index: 0,
                             onClick: (index) {
                               _showQuestionBottomSheet(context, questionFirst);

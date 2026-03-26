@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
-import 'package:clora_user/widgets/animated_marble_background.dart';
 import 'package:clora_user/extensions/extensions.dart';
 import 'package:clora_user/extensions/extension_util/context_extensions.dart';
 import 'package:clora_user/extensions/extension_util/string_extensions.dart';
@@ -12,11 +11,12 @@ import 'package:clora_user/utils/app_common.dart';
 import 'package:clora_user/utils/app_constants.dart';
 import 'package:clora_user/network/rest_api.dart';
 import 'package:clora_user/main.dart';
-
+import 'package:clora_user/service/firebase_auth_service.dart';
+import 'package:clora_user/screens/auth/phone_login_screen.dart';
 import '../onboarding/fu_style_question_screen.dart';
-import 'forgot_password_screen.dart';
 import '../user/user_dashboard_screen.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart' as stream_video;
+
 class UserSignInScreen extends StatefulWidget {
   const UserSignInScreen({super.key});
 
@@ -26,40 +26,17 @@ class UserSignInScreen extends StatefulWidget {
 
 class _UserSignInScreenState extends State<UserSignInScreen> {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-
-  final FocusNode emailFocus = FocusNode();
-  final FocusNode passFocus = FocusNode();
-
-  bool _passwordVisible = false;
+  final FirebaseAuthService _authService = FirebaseAuthService();
 
   @override
   void initState() {
     super.initState();
     appStore.setLoading(false);
-    logScreenView("SignIn screen");
   }
 
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    emailFocus.dispose();
-    passFocus.dispose();
-    super.dispose();
-  }
-
+  /// ================= LOGIN (UNCHANGED) =================
   Future<void> loginApi(
       {bool? isFormAutoValid, String? email, String? password}) async {
-
-    hideKeyboard(context);
-    passFocus.unfocus();
-    emailFocus.unfocus();
-
-    bool isValid = isFormAutoValid ?? formKey.currentState!.validate();
-    if (!isValid) return;
 
     Map<String, dynamic> req = {
       'email': email,
@@ -85,14 +62,12 @@ class _UserSignInScreenState extends State<UserSignInScreen> {
         userStore.setToken(value.data!.apiToken.validate());
         await setValue(IS_LOGIN, true);
 
-        // 🔥 CONNECT STREAM CHAT HERE
         if (value.data!.streamToken != null) {
 
           await client.connectUser(
             User(
               id: value.data!.id.toString(),
-              name: value.data!.displayName ??
-                  "${value.data!.firstName ?? ""} ${value.data!.lastName ?? ""}".trim(),
+              name: value.data!.displayName ?? "",
               image: value.data!.profileImage,
             ),
             value.data!.streamToken!,
@@ -107,17 +82,10 @@ class _UserSignInScreenState extends State<UserSignInScreen> {
             ),
             userToken: value.data!.streamToken!,
           );
-
-
-
-
         }
-
-
 
         DashboardScreen(currentIndex: 0).launch(context);
       }
-
 
       appStore.setLoading(false);
 
@@ -126,159 +94,171 @@ class _UserSignInScreenState extends State<UserSignInScreen> {
     });
   }
 
+  /// ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: AnimatedMarbleBackground(
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(40),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 45, sigmaY: 45),
-                  child: Container(
-                    width: 350,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 40),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.30),
-                      borderRadius: BorderRadius.circular(40),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.6),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.pink.withOpacity(0.25),
-                          blurRadius: 50,
-                          offset: const Offset(0, 25),
+      backgroundColor: Colors.white,
+
+      body: Column(
+        children: [
+
+          /// 🔝 TOP (LESS EMPTY SPACE NOW)
+          Expanded(
+            flex: 65,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center, // 👈 pushes content down
+                children: [
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Image.asset(
+                      ic_logo,
+                      width: double.infinity, // 👈 full width
+                      height: 340,
+                      fit: BoxFit.contain, // 👈 no stretch, clean scale
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Column(
+                    children: [
+
+                      /// 🔥 GRADIENT TITLE
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [
+                            Colors.black,
+                            Colors.pink.shade400,
+                          ],
+                        ).createShader(bounds),
+                        child: Text(
+                          "Welcome Back",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white, // required for shader
+                            letterSpacing: 0.8,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-
-                          Image.asset(ic_logo, height: 70),
-
-                          const SizedBox(height: 20),
-
-                          Text(
-                            language.welcomeBack,
-                            style: boldTextStyle(
-                              size: 24,
-                              color: Colors.pink.shade700,
-                            ),
-                          ),
-
-                          const SizedBox(height: 35),
-
-                          _glassInput(
-                            controller: emailController,
-                            hint: language.email,
-                          ),
-
-                          const SizedBox(height: 22),
-
-                          _glassInput(
-                            controller: passwordController,
-                            hint: language.password,
-                            isPassword: true,
-                          ),
-
-                          const SizedBox(height: 35),
-
-                          /// 💗 LOGIN BUTTON (Bright Pink)
-                          GestureDetector(
-                            onTap: () {
-                              loginApi(
-                                email: emailController.text.trim(),
-                                password: passwordController.text.trim(),
-                              );
-                            },
-                            child: Container(
-                              height: 56,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFF5DA2),
-                                    Color(0xFFFF2E8A),
-                                  ],
-                                ),
-                                borderRadius:
-                                BorderRadius.circular(28),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.pink.withOpacity(0.5),
-                                    blurRadius: 30,
-                                    offset: const Offset(0, 15),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Text(
-                                  language.login,
-                                  style: boldTextStyle(
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 18),
-
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      FuStyleQuestionScreen(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              "Don't have an account? Sign Up",
-                              style: boldTextStyle(
-                                color: Colors.pink.shade700,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      ForgotPasswordScreen(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              language.forgotPassword,
-                              style: primaryTextStyle(
-                                color: Colors.pink.shade600,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
-                    ),
+
+                      const SizedBox(height: 6),
+
+                      /// ✨ SUBTITLE
+                      Text(
+                        "Login to explore the journey of womanhood",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black.withOpacity(0.65),
+                          height: 1.5,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20), // 👈 controlled spacing
+                ],
+              ),
+            ),
+          ),
+
+          /// 🌸 BOTTOM (TIGHT + BALANCED)
+          Expanded(
+            flex: 45,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.pink.shade300,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+
+                      const SizedBox(height: 30),
+
+                      _glassButton(
+                        icon: Icons.phone_iphone,
+                        text: "Login with Phone Number",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => PhoneLoginScreen()),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _glassButton(
+                        icon: Icons.g_mobiledata,
+                        text: "Continue with Google",
+                        onTap: () async {
+                          var user =
+                          await _authService.signInWithGoogle();
+
+                          if (user != null) {
+                            String uid = user.uid;
+                            String email = user.email ?? "";
+
+                            var res = await firebaseLoginApi({
+                              "firebase_uid": uid,
+                              "email": email,
+                            });
+
+                            if (res['isNewUser'] == true) {
+                              AiOnboardingScreen().launch(context);
+                            } else {
+                              DashboardScreen(currentIndex: 0)
+                                  .launch(context);
+                            }
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      _glassButton(
+                        icon: Icons.apple,
+                        text: "Login via Apple ID",
+                        onTap: () {},
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      TextButton(
+                        onPressed: () {
+                          AiOnboardingScreen().launch(context);
+                        },
+                        child: Text(
+                          "Don't have an account? Sign Up",
+                          style: boldTextStyle(
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
 
       floatingActionButtonLocation:
@@ -290,53 +270,130 @@ class _UserSignInScreenState extends State<UserSignInScreen> {
     );
   }
 
-  Widget _glassInput({
-    required TextEditingController controller,
-    required String hint,
-    bool isPassword = false,
+  Widget _glassButton({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(26),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-        child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.55),
-            borderRadius: BorderRadius.circular(26),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.8),
-            ),
-          ),
-          child: TextFormField(
-            controller: controller,
-            obscureText: isPassword && !_passwordVisible,
-            style: TextStyle(
-              color: Colors.pink.shade800,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(
-                color: Colors.pink.shade400,
-              ),
-              border: InputBorder.none,
-              suffixIcon: isPassword
-                  ? IconButton(
-                icon: Icon(
-                  _passwordVisible
-                      ? Icons.visibility
-                      : Icons.visibility_off,
-                  color: Colors.pink.shade600,
+    return _AnimatedGlassButton(
+      icon: icon,
+      text: text,
+      onTap: onTap,
+    );
+  }
+
+
+
+
+
+
+}
+
+class _AnimatedGlassButton extends StatefulWidget {
+  final IconData icon;
+  final String text;
+  final VoidCallback onTap;
+
+  const _AnimatedGlassButton({
+    required this.icon,
+    required this.text,
+    required this.onTap,
+  });
+
+  @override
+  State<_AnimatedGlassButton> createState() => _AnimatedGlassButtonState();
+}
+
+class _AnimatedGlassButtonState extends State<_AnimatedGlassButton> {
+  double _scale = 1.0;
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() => _scale = 0.96);
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() => _scale = 1.0);
+    widget.onTap();
+  }
+
+  void _onTapCancel() {
+    setState(() => _scale = 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: _scale,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      child: GestureDetector(
+        onTapDown: _onTapDown,
+        onTapUp: _onTapUp,
+        onTapCancel: _onTapCancel,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            child: Container(
+              height: 60,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+
+                /// 💎 GLASS LOOK
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.25),
+                    Colors.white.withOpacity(0.05),
+                  ],
                 ),
-                onPressed: () {
-                  setState(() {
-                    _passwordVisible =
-                    !_passwordVisible;
-                  });
-                },
-              )
-                  : null,
+
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 1.2,
+                ),
+              ),
+
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+
+                  /// ✨ SHINE
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: 0.2,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(30),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white,
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(widget.icon, color: Colors.black),
+                      const SizedBox(width: 12),
+                      Text(
+                        widget.text,
+                        style: boldTextStyle(
+                          size: 18,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

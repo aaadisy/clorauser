@@ -36,6 +36,7 @@ import '../model/user/restore_data_model.dart';
 import '../model/user/update_user_model.dart';
 import '../model/user/user_models/user_model.dart';
 import '../model/user/user_models/user_response_model.dart';
+import '../model/video_category_model.dart';
 import '../utils/app_constants.dart';
 import 'network_utils.dart';
 // import 'network_utils.dart';
@@ -209,7 +210,19 @@ Future<AddBookmarkResponse> updateBookMarkStatus(Map req) async {
 }
 
 //working
+// categorylist
 Future<List<Symptoms>> AddSubSymptoms() async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+      await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+  
+  log('\u001B[32m[API_CALL] Calling sub-symptoms-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+  
   List<Symptoms> userSymptoms = [];
   var res = await handleResponse(
       await buildHttpResponse('sub-symptoms-list', method: HttpMethod.get));
@@ -496,6 +509,36 @@ Future<void> logout(
   );
 }
 
+Future<List<VideoCategoryModel>> getVideoCategories() async {
+
+  var response = await handleResponse(
+    await buildHttpResponse('videos', method: HttpMethod.get),
+  ).then((value) => value);
+
+  response = response['data']; // 👈 IMPORTANT
+
+  List<VideoCategoryModel> list = [];
+
+  response.forEach((item) {
+    list.add(VideoCategoryModel.fromJson(item));
+  });
+
+  return list;
+}
+
+
+Future<dynamic> firebaseLoginApi(Map req) async {
+  var response = await handleResponse(
+    await buildHttpResponse(
+      'firebase-login',
+      request: req,
+      method: HttpMethod.post,
+    ),
+  );
+
+  return response['responseData'];
+}
+
 Future<void> saveDoctorData(DoctorResponse? doctorData) async {
   await userStore.setDrName(doctorData!.data!.name.validate());
   await userStore.setUserDrEmail(doctorData.data!.email.validate());
@@ -640,4 +683,3 @@ Future<DefaultMessageResponse> hidePostApi(Map req) async {
       await buildHttpResponse('hide-userchat',
           request: req, method: HttpMethod.post)));
 }
-

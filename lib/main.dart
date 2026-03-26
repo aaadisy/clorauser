@@ -8,7 +8,8 @@ import 'package:background_fetch/background_fetch.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:clora_user/extensions/extension_util/string_extensions.dart';
 import 'package:clora_user/extensions/extensions.dart';
-import 'package:clora_user/screens/common/splash_screen.dart';
+import 'package:clora_user/newsplash.dart'; // NEW: Import the new splash screen
+// import 'package:clora_user/screens/common/splash_screen.dart'; // REMOVED: Old splash screen import
 import 'package:clora_user/service/notification_service.dart';
 import 'package:clora_user/service/reminder_service.dart';
 import 'package:clora_user/store/app_store.dart';
@@ -22,7 +23,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
+// import 'package:onesignal_flutter/onesignal.dart'; // REMOVED BROKEN IMPORT
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminate_restart/terminate_restart.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
@@ -45,7 +46,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 AppStore appStore = AppStore();
 UserStore userStore = UserStore();
 const MethodChannel platform =
-    MethodChannel('dexterx.dev/flutter_local_notifications_example');
+    const MethodChannel('dexterx.dev/flutter_local_notifications_example');
 MenstrualCycleWidget instance = MenstrualCycleWidget.instance!;
 const String portName = 'notification_send_port';
 late SharedPreferences sharedPreferences;
@@ -58,7 +59,7 @@ List<String> scheduleRemindersData = [];
 NotificationService notificationService = NotificationService();
 final List<String> days = [MON, TUE, WED, THU, FRI, SAT, SUN];
 bool mIsEnterKey = false;
-OneSignal oneSignal = OneSignal();
+// OneSignal oneSignal = OneSignal(); // REMOVED BROKEN DECLARATION
 int CurrentAndroidVersion = 1;
 int CurrentIOSVersion = 1;
 bool isAndroidForceUpdate = false;
@@ -349,7 +350,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
               child: child!,
             );
           },
-          home: SplashScreen(),
+          home: NewSplashScreen(), // CHANGED: Using NewSplashScreen instead of old SplashScreen
           supportedLocales: getSupportedLocales(),
           localizationsDelegates: [
             GlobalMaterialLocalizations.delegate,

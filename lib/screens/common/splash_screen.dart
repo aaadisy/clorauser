@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:clora_user/languageConfiguration/LanguageDataConstant.dart';
 import 'package:clora_user/languageConfiguration/ServerLanguageResponse.dart';
 import 'package:clora_user/model/user/user_models/user_model.dart';
+import 'package:clora_user/screens/onboarding/fu_style_question_screen.dart';
 import 'package:clora_user/screens/user/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -203,38 +204,10 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  updateConfiguration() async {
-    final String? prevPeriodDay = instance.getPreviousPeriodDay();
-    final DateTime? prevPeriodDt = prevPeriodDay != null && prevPeriodDay != ""
-        ? DateTime.parse(prevPeriodDay)
-        : null;
-    final DateTime? lastPeriodDate = (prevPeriodDt == null ||
-            prevPeriodDt.isAtSameMomentAs(DateTime(1971, 1, 1)))
-        ? null
-        : prevPeriodDt;
-    int cycleLength = getIntAsync(CYCLE_LENGTH);
-    int periodLength = getIntAsync(PERIOD_LENGTH);
-
-    if (cycleLength == 0) {
-      cycleLength = DEFAULT_CYCLE_LENGTH;
-      setValue(CYCLE_LENGTH, cycleLength);
-    }
-
-    if (periodLength == 0) {
-      periodLength = DEFAULT_PERIOD_LENGTH;
-      setValue(PERIOD_LENGTH, periodLength);
-    }
-
-    if (userStore.userId.toString().isEmptyOrNull) return;
-
-    instance.updateConfiguration(
-      cycleLength: cycleLength,
-      periodDuration: periodLength,
-      customerId: userStore.userId.toString(),
-      lastPeriodDate: lastPeriodDate,
-    );
-
-    updateMenstrualWidgetLanguage();
+  Future<void> _clearOldQuestionnaireData() async {
+    // Remove old state flags to prevent old flow from triggering
+    await removeKey(KEY_QUESTION_DATA);
+    await removeKey(IS_USER_COMPLETED_QUE); 
   }
 
   Future<void> navigateBasedOnUserState() async {
@@ -244,22 +217,43 @@ class _SplashScreenState extends State<SplashScreen> {
       final isAuthenticated = await _authenticateUserIfRequired();
       if (!isAuthenticated) return;
 
-      final userType = getStringAsync(USER_TYPE);
-
-      if (userType == APP_USER || userType == ANONYMOUS) {
-        UserModel? userData = await getUserFromLocalStorage();
-
-        if (userData != null) {
-          userStore.setUserModelData(userData);
-          updateConfiguration();
-        }
-
-        DashboardScreen(currentIndex: 0)
-            .launch(context, isNewTask: true);
-      } else {
-        UserSignInScreen()
-            .launch(context, isNewTask: true);
+      final userToken = getStringAsync(TOKEN);
+      if (userToken.isEmptyOrNull) {
+        // If token is missing despite IS_LOGIN being true, force sign in
+        UserSignInScreen().launch(context, isNewTask: true);
+        return;
       }
+
+      // *** LOGIC: Check profile status via API ***
+      var res = await firebaseLoginApi({
+        "firebase_uid": userToken,
+        "email": userStore.email.isEmpty ? getStringAsync(EMAIL) : userStore.email,
+        "phone": userStore.email, // Placeholder: Verify actual parameter names expected by API
+        "name": userStore.fName.isEmpty ? getStringAsync(FIRSTNAME) : userStore.fName, // Placeholder
+      });
+
+      if (res['status'] == true) {
+        if (res['profile_completed'] == 0) {
+          // Profile not completed -> Go to new onboarding flow
+          await _clearOldQuestionnaireData();
+          AiOnboardingScreen(isFromLogin: true).launch(context, isNewTask: true);
+        } else {
+          // Profile completed -> Go to Dashboard
+          await _clearOldQuestionnaireData();
+          UserModel? userData = await getUserFromLocalStorage();
+          if (userData != null) {
+            userStore.setUserModelData(userData);
+          }
+          DashboardScreen(currentIndex: 0).launch(context, isNewTask: true);
+        }
+      } else {
+        // API call failed for existing user (e.g., token expired/invalid) -> Force sign in/re-auth
+        setValue(IS_LOGIN, false);
+        userStore.clearUserData();
+        removeKey(TOKEN);
+        UserSignInScreen().launch(context, isNewTask: true);
+      }
+
     } else {
       UserSignInScreen()
           .launch(context, isNewTask: true);

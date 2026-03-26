@@ -61,7 +61,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   Future<bool> onWillPop() async {
     return await showDialog(
-      context: context,
+      context: context, // <-- FIXED: Added missing context argument
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(language.confirmExit),

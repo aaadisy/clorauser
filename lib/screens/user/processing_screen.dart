@@ -28,6 +28,7 @@ class _PleaseWaitScreenState extends State<PleaseWaitScreen> {
   @override
   void initState() {
     super.initState();
+
     updateUserGoalStatus();
     logScreenView("GoalType process screen");
   }

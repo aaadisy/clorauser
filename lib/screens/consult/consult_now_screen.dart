@@ -1205,189 +1205,162 @@ class DoctorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (doctor == null) return const SizedBox();
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-
-          /// IMAGE
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: doctor!.healthExpertsImage != null
-                ? Image.network(
-              doctor!.healthExpertsImage!,
-              height: 80,
-              width: 80,
-              fit: BoxFit.cover,
-            )
-                : Container(
-              height: 80,
-              width: 80,
-              color: Colors.grey.shade200,
-              child: const Icon(Icons.person, size: 40),
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white.withOpacity(0.25),
+            border: Border.all(color: Colors.white.withOpacity(0.35)),
           ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
-          const SizedBox(width: 12),
-
-          Expanded(
-            child:
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                /// NAME > CLINIC
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        doctor!.displayName ?? "",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      doctor!.hospitalName ?? "",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    )
-                  ],
+              /// IMAGE
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: doctor!.healthExpertsImage != null
+                    ? Image.network(
+                  doctor!.healthExpertsImage!,
+                  height: 80,
+                  width: 80,
+                  fit: BoxFit.cover,
+                )
+                    : Container(
+                  height: 80,
+                  width: 80,
+                  color: Colors.white.withOpacity(0.3),
+                  child: const Icon(Icons.person, size: 40),
                 ),
+              ),
 
-                const SizedBox(height: 4),
+              const SizedBox(width: 12),
 
-                /// EDUCATION
-                Text(
-                  doctor!.qualification ?? "",
-                  style: const TextStyle(fontSize: 12),
-                ),
-
-                const SizedBox(height: 8),
-
-                /// EXPERIENCE > FEE
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
+                    /// NAME + HOSPITAL
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.work_outline,
-                            size: 14, color: Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(
-                          "${doctor!.experience ?? 0} yrs exp",
-                          style: const TextStyle(fontSize: 12),
+                        Expanded(
+                          child: Text(
+                            doctor!.displayName ?? "",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ],
-                    ),
-
-                    Row(
-                      children: [
-                        const Icon(Icons.currency_rupee,
-                            size: 14, color: Colors.grey),
                         Text(
-                          "${doctor!.fee ?? 0}",
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 6),
-
-                /// CONSULTATIONS > RATING
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-
-                    Text(
-                      "${doctor!.totalReviews ?? 0} consultations",
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey,
-                      ),
-                    ),
-
-                    Row(
-                      children: [
-                        const Icon(Icons.star,
-                            size: 14, color: Colors.orange),
-                        const SizedBox(width: 3),
-                        Text(
-                          "${doctor!.averageRating ?? 0}",
+                          doctor!.hospitalName ?? "",
                           style: const TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            color: Colors.black54,
+                          ),
+                        )
+                      ],
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Text(
+                      doctor!.qualification ?? "",
+                      style: const TextStyle(fontSize: 12),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    /// EXPERIENCE + FEE
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.work_outline, size: 14),
+                            const SizedBox(width: 4),
+                            Text("${doctor!.experience ?? 0} yrs"),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.currency_rupee, size: 14),
+                            Text("${doctor!.fee ?? 0}"),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// REVIEWS
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "${doctor!.totalReviews ?? 0} consultations",
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.star,
+                                size: 14, color: Colors.orange),
+                            const SizedBox(width: 3),
+                            Text("${doctor!.averageRating ?? 0}"),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// LOCATION
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, size: 14),
+                        const SizedBox(width: 3),
+                        Text(
+                          doctor!.city ?? "",
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    /// 🔥 BOOK BUTTON FIXED
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => onConsultNowTap(doctor!),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ColorUtils.colorPrimary,
+                              minimumSize: const Size(double.infinity, 45),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text("Book Now"),
                           ),
                         ),
                       ],
-                    ),
+                    )
                   ],
                 ),
-
-                const SizedBox(height: 6),
-
-                /// LOCATION
-                Row(
-                  children: [
-                    const Icon(Icons.location_on,
-                        size: 14, color: Colors.grey),
-                    const SizedBox(width: 3),
-                    Text(
-                      doctor!.city ?? "",
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                /// BOOK NOW BUTTON
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton(
-                    onPressed: () => onConsultNowTap(doctor!),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorUtils.colorPrimary,
-                      minimumSize: const Size(90, 34),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      "Book Now",
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                )
-              ],
-            ),
-          )
-        ],
+              )
+            ],
+          ),
+        ),
       ),
     );
   }

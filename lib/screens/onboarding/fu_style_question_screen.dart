@@ -6,16 +6,22 @@ import '../../widgets/animated_marble_background.dart';
 import '../../utils/app_constants.dart';
 import '../../utils/app_common.dart';
 import '../user/sign_up_screen.dart';
+import '../user/user_dashboard_screen.dart';
 import 'fu_questions.dart';
 import 'fu_question_model.dart';
 
-class FuStyleQuestionScreen extends StatefulWidget {
+class AiOnboardingScreen extends StatefulWidget {
+
+  final bool isFromLogin;
+
+  const AiOnboardingScreen({this.isFromLogin = false});
+
   @override
-  State<FuStyleQuestionScreen> createState() =>
-      _FuStyleQuestionScreenState();
+  State<AiOnboardingScreen> createState() =>
+      _AiOnboardingScreenState();
 }
 
-class _FuStyleQuestionScreenState extends State<FuStyleQuestionScreen> {
+class _AiOnboardingScreenState extends State<AiOnboardingScreen> {
   int index = 0;
 
   final TextEditingController controller = TextEditingController();
@@ -87,7 +93,9 @@ class _FuStyleQuestionScreenState extends State<FuStyleQuestionScreen> {
 
       await Future.delayed(const Duration(milliseconds: 500));
 
-      SignUpScreen().launch(context);
+     // SignUpScreen().launch(context);
+
+      DashboardScreen(currentIndex: 0).launch(context);
     }
   }
 
