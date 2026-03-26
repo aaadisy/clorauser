@@ -1,0 +1,51 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+.dart_tool/
+.flutter-plugins-iossim
+.flutter-plugins-ios
+.flutter-plugins-android
+.android/local.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Packages & Pub
+.packages
+.dart_tool/
+pubspec.lock
+
+# Generated files
+lib/generated_plugin_registrant.dart
+# Flutter specific
+ios/Podfile.lock
+android/app/build/
+android/app/src/main/kotlin/dev/flutter/plugin/gen/GeneratedPluginRegistrant.kt
+android/app/src/main/java/com/example/clora_user/GeneratedPluginRegistrant.java
+
+# Local configuration
+local.properties
+
+# Coverage
+coverage/
+.coverage
+.packages
+.flutter_test_config.json
+
+# Android
+*.apk
+*.aab
+
+# iOS
+ios/build/
+ios/Runner.xcodeproj/xcuserdata/
+ios/Runner.xcworkspace/xcuserdata/
+ios/Pods/
+ios/ios.iml
