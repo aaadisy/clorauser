@@ -89,6 +89,11 @@ Future<UserResponse> logInAsUserApi(request) async {
 
     saveUserData(userModel.data);
     await userStore.setLogin(true);
+    // *** EXPLICITLY SAVE TOKEN TO SHARED PREFERENCES UPON LOGIN ***
+    if (userModel.data?.apiToken.validate().isNotEmpty ?? false) {
+      await sharedPreferences.setString(TOKEN, userModel.data!.apiToken.validate());
+    }
+    // -----------------------------------------------------------
     return userModel;
   });
 }
@@ -97,7 +102,6 @@ Future<void> saveUserData(UserModel? userModel) async {
   if (userModel!.apiToken.validate().isNotEmpty)
     await userStore.setToken(userModel.apiToken.validate());
 
-  await userStore.setToken(userModel.apiToken.validate());
   await userStore.setUserID(userModel.id.validate());
   await userStore.setUserEmail(userModel.email.validate());
   await userStore.setFirstName(userModel.firstName.validate());
@@ -161,7 +165,7 @@ Future<DefaultMessageResponse> manualBackupData(Map req) async {
 }
 
 Future<Either<DefaultMessageResponse, BackupRestoreResponse>>
-    restoreBackupApi() async {
+restoreBackupApi() async {
   try {
     var response = await handleResponse(
         await buildHttpResponse('restore-data', method: HttpMethod.get));
@@ -192,6 +196,17 @@ Future<void> updateUserStatusApi(Map req) async {
 
 //working
 Future<BookmarkResponseModel> getBookmarkApi() async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling getBookmarkApi. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(await buildHttpResponse(
       'get-bookmark-articles-list',
       method: HttpMethod.get));
@@ -217,12 +232,12 @@ Future<List<Symptoms>> AddSubSymptoms() async {
   // to ensure buildHeaderTokens() uses the freshest value.
   final storedToken = getStringAsync(TOKEN);
   if (storedToken.isNotEmpty && storedToken != userStore.token) {
-      await userStore.setToken(storedToken);
+    await userStore.setToken(storedToken);
   }
   // -------------------------------------------
-  
+
   log('\u001B[32m[API_CALL] Calling sub-symptoms-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
-  
+
   List<Symptoms> userSymptoms = [];
   var res = await handleResponse(
       await buildHttpResponse('sub-symptoms-list', method: HttpMethod.get));
@@ -246,6 +261,17 @@ Future<UserResponse> getUserDetailsApi({int? id}) async {
 //working
 /// categorylist
 Future<CategoryListResponse> getCategoryListApi({int? id}) async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling category-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(await buildHttpResponse(
       "category-list?goal_type=$id",
       method: HttpMethod.post));
@@ -265,6 +291,17 @@ Future<CategoryDataResponse> getCategoryDetailsApi({int? categoryId}) async {
 //working
 /// Dashboard
 Future<DashboardResponse> getDashboardListApi(Map request) async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling dashboard-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- DEBUG LOG ADDED HERE
+
   var response = await handleResponse(await buildHttpResponse(
       request: request, "dashboard-list", method: HttpMethod.post));
   response = response['responseData'];
@@ -309,6 +346,17 @@ Future<DefaultMessageResponse> forgotPasswordApi(Map req) async {
 //working
 ///Doctor Article List
 Future<ArticleList> getHealthExpertArticleListApi({int page = 1}) async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling article-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(await buildHttpResponse(
       'article-list?page=$page',
       method: HttpMethod.get));
@@ -327,6 +375,17 @@ Future<DefaultMessageResponse> deleteHealthExpertAccountApi() async {
 
 //working
 Future<HealthExpert> getHealthExpertListApi() async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling health-expert-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(
       await buildHttpResponse('health-expert-list', method: HttpMethod.get));
   response = response['responseData'];
@@ -344,6 +403,17 @@ Future<ArticleResponse> deleteArticleDataApi(int? id) async {
 //working
 ///Calculator
 Future<CalculatorResponse> fetchCalculatorToolsListApi() async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling calculator-tool-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(
       await buildHttpResponse("calculator-tool-list", method: HttpMethod.get));
   response = response['responseData'];
@@ -353,6 +423,17 @@ Future<CalculatorResponse> fetchCalculatorToolsListApi() async {
 ///FAQ
 //working
 Future<FaqResponse> fetchFAQListApi() async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling faq-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(
       await buildHttpResponse("faq-list", method: HttpMethod.get));
   response = response['responseData'];
@@ -394,6 +475,17 @@ Future<DashboardArticle> TagArticleList(Map request, {int page = 1}) async {
 
 /// Get Expert Question List
 Future<ExpertQuestionListModel> getQuestionToExpertApi({int page = 1}) async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling assigndoctor-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(await buildHttpResponse(
       "assigndoctor-list?page=$page",
       method: HttpMethod.get));
@@ -403,6 +495,17 @@ Future<ExpertQuestionListModel> getQuestionToExpertApi({int page = 1}) async {
 
 Future<ExpertQuestionListModel> getPendingQuestionToExpertApi(
     {int page = 1}) async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling askexpert-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(await buildHttpResponse(
       "askexpert-list?page=$page",
       method: HttpMethod.get));
@@ -510,6 +613,16 @@ Future<void> logout(
 }
 
 Future<List<VideoCategoryModel>> getVideoCategories() async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling videos. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
 
   var response = await handleResponse(
     await buildHttpResponse('videos', method: HttpMethod.get),
@@ -568,6 +681,17 @@ Future<DefaultMessageResponse> subscribeForPremium(Map req) async {
 
 // Doctor dashboard
 Future<DoctorDashboardResponseData> getDoctorDashboard() async {
+  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
+  // Pulls the latest token from SharedPreferences into the observable userStore
+  // to ensure buildHeaderTokens() uses the freshest value.
+  final storedToken = getStringAsync(TOKEN);
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+  }
+  // -------------------------------------------
+
+  log('\u001B[32m[API_CALL] Calling doctor-dashboard. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+
   var response = await handleResponse(
       await buildHttpResponse('doctor-dashboard', method: HttpMethod.get));
   response = response['responseData'];
@@ -587,7 +711,7 @@ Future<ServerLanguageResponse> getLanguageList(String? versionNo) async {
 // AppSetting
 Future<AppSettings> getAppSettings() async {
   var response = await handleResponse(
-          await buildHttpResponse('appsetting', method: HttpMethod.get))
+      await buildHttpResponse('appsetting', method: HttpMethod.get))
       .then((value) => value);
   response = response['responseData'];
   return AppSettings.fromJson(response);

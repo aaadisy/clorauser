@@ -208,24 +208,32 @@ class _UserSignInScreenState extends State<UserSignInScreen> {
                         icon: Icons.g_mobiledata,
                         text: "Continue with Google",
                         onTap: () async {
-                          var user =
-                          await _authService.signInWithGoogle();
+                          if (appStore.isLoading) return;
+                          appStore.setLoading(true);
+                          try {
+                            var user =
+                            await _authService.signInWithGoogle();
 
-                          if (user != null) {
-                            String uid = user.uid;
-                            String email = user.email ?? "";
+                            if (user != null) {
+                              String uid = user.uid;
+                              String email = user.email ?? "";
 
-                            var res = await firebaseLoginApi({
-                              "firebase_uid": uid,
-                              "email": email,
-                            });
+                              var res = await firebaseLoginApi({
+                                "firebase_uid": uid,
+                                "email": email,
+                              });
 
-                            if (res['isNewUser'] == true) {
-                              AiOnboardingScreen().launch(context);
-                            } else {
-                              DashboardScreen(currentIndex: 0)
-                                  .launch(context);
+                              if (res['isNewUser'] == true) {
+                                AiOnboardingScreen().launch(context);
+                              } else {
+                                DashboardScreen(currentIndex: 0)
+                                    .launch(context);
+                              }
                             }
+                          } catch (e) {
+                            toast("Google Sign-In Failed: ${e.toString()}");
+                          } finally {
+                            appStore.setLoading(false);
                           }
                         },
                       ),
