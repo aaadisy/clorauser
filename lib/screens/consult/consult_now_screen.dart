@@ -226,6 +226,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
     _tabController = TabController(length: 2, vsync: this);
 
     _tabController.addListener(() {
+      setState(() {}); // 🔥 THIS FIXES YOUR ISSUE
       if (_tabController.index == 1) {
         _fetchMyConsultations();
       }
@@ -336,23 +337,34 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Consult Doctors"),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: ColorUtils.colorPrimary,
-          unselectedLabelColor: Colors.grey,
-          tabs: const [
-            Tab(text: "Doctors"),
-            Tab(text: "Reports"),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildDoctorsTab(),
-          _buildReportsTab(),
+          AppBar(
+            toolbarHeight: 0, // 🔥 completely hides AppBar
+
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+          
+          // ----------------- CUSTOM SEGMENT CONTROL -----------------
+          _ConsultSegmentControl(
+            controller: _tabController,
+            selectedColor: ColorUtils.colorPrimary, // Using the primary pink color
+            unselectedColor: Colors.transparent,
+            titles: const ["Doctors", "Reports"],
+          ),
+          // ----------------------------------------------------------
+
+          /// TAB BAR VIEW (Now expanded to fill remaining space)
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDoctorsTab(),
+                _buildReportsTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1205,163 +1217,187 @@ class DoctorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (doctor == null) return const SizedBox();
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.white.withOpacity(0.25),
-            border: Border.all(color: Colors.white.withOpacity(0.35)),
-          ),
-          child: Row(
+    final imageUrl = doctor!.healthExpertsImage ?? "";
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08), // clean glass
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: Column(
+        children: [
+
+          /// 🔹 TOP ROW
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
               /// IMAGE
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: doctor!.healthExpertsImage != null
+                child: imageUrl.isNotEmpty
                     ? Image.network(
-                  doctor!.healthExpertsImage!,
+                  imageUrl,
                   height: 80,
                   width: 80,
                   fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _placeholder(),
                 )
-                    : Container(
-                  height: 80,
-                  width: 80,
-                  color: Colors.white.withOpacity(0.3),
-                  child: const Icon(Icons.person, size: 40),
-                ),
+                    : _placeholder(),
               ),
 
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
 
+              /// RIGHT CONTENT
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    /// NAME + HOSPITAL
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            doctor!.displayName ?? "",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Text(
-                          doctor!.hospitalName ?? "",
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                        )
-                      ],
+                    /// NAME
+                    Text(
+                      doctor!.displayName ?? "",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
 
                     const SizedBox(height: 4),
 
+                    /// SPECIALIZATION
                     Text(
-                      doctor!.qualification ?? "",
-                      style: const TextStyle(fontSize: 12),
+                      doctor!.tagLine ?? "",
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    /// EXPERIENCE + FEE (INLINE CLEAN)
+                    Row(
+                      children: [
+                        const Icon(Icons.work_outline, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          "${doctor!.experience ?? 0} yrs",
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        const Text("•",
+                            style: TextStyle(color: Colors.grey)),
+
+                        const SizedBox(width: 12),
+
+                        const Icon(Icons.currency_rupee, size: 14),
+                        Text(
+                          "${doctor!.fee ?? 0}",
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 8),
 
-                    /// EXPERIENCE + FEE
+                    /// RATING + REVIEWS
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.work_outline, size: 14),
-                            const SizedBox(width: 4),
-                            Text("${doctor!.experience ?? 0} yrs"),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            const Icon(Icons.currency_rupee, size: 14),
-                            Text("${doctor!.fee ?? 0}"),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    /// REVIEWS
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
+                        const Icon(Icons.star,
+                            size: 14, color: Colors.orange),
+                        const SizedBox(width: 4),
                         Text(
-                          "${doctor!.totalReviews ?? 0} consultations",
-                          style: const TextStyle(fontSize: 11),
+                          "${doctor!.averageRating ?? 0}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
                         ),
-                        Row(
-                          children: [
-                            const Icon(Icons.star,
-                                size: 14, color: Colors.orange),
-                            const SizedBox(width: 3),
-                            Text("${doctor!.averageRating ?? 0}"),
-                          ],
+                        const SizedBox(width: 6),
+                        Text(
+                          "(${doctor!.totalReviews ?? 0} reviews)",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
 
                     /// LOCATION
                     Row(
                       children: [
-                        const Icon(Icons.location_on, size: 14),
-                        const SizedBox(width: 3),
-                        Text(
-                          doctor!.city ?? "",
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    /// 🔥 BOOK BUTTON FIXED
-                    Row(
-                      children: [
+                        const Icon(Icons.location_on,
+                            size: 14, color: Colors.black54),
+                        const SizedBox(width: 4),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => onConsultNowTap(doctor!),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ColorUtils.colorPrimary,
-                              minimumSize: const Size(double.infinity, 45),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
+                          child: Text(
+                            doctor!.city ?? "Location not available",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
-                            child: const Text("Book Now"),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               )
             ],
           ),
-        ),
+
+          const SizedBox(height: 14),
+
+          /// 🔥 BUTTON (already good)
+          SizedBox(
+            width: double.infinity,
+            height: 45,
+            child: ElevatedButton(
+              onPressed: () => onConsultNowTap(doctor!),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ColorUtils.colorPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                "Book Consultation",
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          )
+        ],
       ),
+    );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      height: 80,
+      width: 80,
+      color: Colors.white.withOpacity(0.2),
+      child: const Icon(Icons.person, size: 40),
     );
   }
 }
@@ -1916,4 +1952,67 @@ void startVideoCall({required String doctorId}) async {
       ),
     ),
   );
+}
+
+// --- CUSTOM WIDGET FOR TAB SEGMENT CONTROL ---
+class _ConsultSegmentControl extends StatelessWidget {
+  final TabController controller;
+  final Color selectedColor;
+  final Color unselectedColor;
+  final List<String> titles;
+
+  const _ConsultSegmentControl({
+    required this.controller,
+    required this.selectedColor,
+    required this.unselectedColor,
+    required this.titles,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 55,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.5), // Background for the unselected state, similar to dashboard pill background
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withOpacity(0.7)),
+      ),
+      child: Row(
+        children: List.generate(titles.length, (index) {
+          final isSelected = controller.index == index;
+          return Expanded(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () {
+                  if (controller.index != index) {
+                    controller.animateTo(index);
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  decoration: BoxDecoration(
+                    color: isSelected ? selectedColor : Colors.transparent,
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    titles[index],
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
 }

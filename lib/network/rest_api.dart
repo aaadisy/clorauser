@@ -83,19 +83,18 @@ Future<UserResponse> logInAsUserApi(request) async {
     }
   }
 
-  return await handleResponse(response).then((value) async {
-    value = value['responseData'];
-    UserResponse userModel = UserResponse.fromJson(value);
+  var value = await handleResponse(response);
+  value = value['responseData'];
+  UserResponse userModel = UserResponse.fromJson(value);
 
-    saveUserData(userModel.data);
-    await userStore.setLogin(true);
-    // *** EXPLICITLY SAVE TOKEN TO SHARED PREFERENCES UPON LOGIN ***
-    if (userModel.data?.apiToken.validate().isNotEmpty ?? false) {
-      await sharedPreferences.setString(TOKEN, userModel.data!.apiToken.validate());
-    }
-    // -----------------------------------------------------------
-    return userModel;
-  });
+  saveUserData(userModel.data);
+  await userStore.setLogin(true);
+  // *** EXPLICITLY SAVE TOKEN TO SHARED PREFERENCES UPON LOGIN ***
+  if (userModel.data?.apiToken.validate().isNotEmpty ?? false) {
+    await sharedPreferences.setString(TOKEN, userModel.data!.apiToken.validate());
+  }
+  // -------------------------------------------
+  return userModel;
 }
 
 Future<void> saveUserData(UserModel? userModel) async {
@@ -195,6 +194,7 @@ Future<void> updateUserStatusApi(Map req) async {
 }
 
 //working
+/// categorylist
 Future<BookmarkResponseModel> getBookmarkApi() async {
   // *** FORCE TOKEN UPDATE BEFORE API CALL ***
   // Pulls the latest token from SharedPreferences into the observable userStore
@@ -226,28 +226,68 @@ Future<AddBookmarkResponse> updateBookMarkStatus(Map req) async {
 
 //working
 // categorylist
-Future<List<Symptoms>> AddSubSymptoms() async {
-  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
-  // Pulls the latest token from SharedPreferences into the observable userStore
-  // to ensure buildHeaderTokens() uses the freshest value.
-  final storedToken = getStringAsync(TOKEN);
-  if (storedToken.isNotEmpty && storedToken != userStore.token) {
-    await userStore.setToken(storedToken);
-  }
-  // -------------------------------------------
+Future<List<Symptoms>> AddSubSymptoms({String? token}) async {
+  try {
+    // Step 1: Decide which token to use
+    String? tokenToSend = token;
 
-  log('\u001B[32m[API_CALL] Calling sub-symptoms-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- ADDED LOG FOR API CALL SITE
+    final storedToken = getStringAsync(TOKEN);
 
-  List<Symptoms> userSymptoms = [];
-  var res = await handleResponse(
-      await buildHttpResponse('sub-symptoms-list', method: HttpMethod.get));
-  res = res['responseData'];
-  if (res['data'] != null) {
-    res['data'].forEach((v) {
-      userSymptoms.add(new Symptoms.fromJson(v));
-    });
+    // Priority:
+    // 1. Passed token
+    // 2. userStore token
+    // 3. stored token (shared prefs)
+
+    if (tokenToSend == null || tokenToSend.isEmpty) {
+      if (userStore.token != null && userStore.token!.isNotEmpty) {
+        tokenToSend = userStore.token;
+      } else if (storedToken.isNotEmpty) {
+        await userStore.setToken(storedToken);
+        tokenToSend = storedToken;
+      }
+    } else {
+      // Sync passed token to store
+      if (tokenToSend != userStore.token) {
+        await userStore.setToken(tokenToSend);
+      }
+    }
+
+    // Final safety check
+    if (tokenToSend == null || tokenToSend.isEmpty) {
+      log('[API_CALL ERROR] No valid token found');
+      return [];
+    }
+
+    log('\u001B[32m[API_CALL] sub-symptoms-list | Token: $tokenToSend\u001B[39m');
+
+    // Step 2: API Call
+    final response = await handleResponse(
+      await buildHttpResponse(
+        'sub-symptoms-list',
+        method: HttpMethod.get,
+        // 👉 IMPORTANT: pass token if your API needs header manually
+        // headers: {
+        //   HttpHeaders.authorizationHeader: 'Bearer $tokenToSend',
+        // },
+      ),
+    );
+
+    final res = response['responseData'];
+
+    List<Symptoms> userSymptoms = [];
+
+    if (res != null && res['data'] != null) {
+      for (var v in res['data']) {
+        userSymptoms.add(Symptoms.fromJson(v));
+      }
+    }
+
+    return userSymptoms;
+  } catch (e, stackTrace) {
+    log('[API_CALL ERROR] sub-symptoms-list failed: $e');
+    log(stackTrace.toString());
+    return [];
   }
-  return userSymptoms;
 }
 
 //not used in app
@@ -290,20 +330,34 @@ Future<CategoryDataResponse> getCategoryDetailsApi({int? categoryId}) async {
 
 //working
 /// Dashboard
-Future<DashboardResponse> getDashboardListApi(Map request) async {
-  // *** FORCE TOKEN UPDATE BEFORE API CALL ***
-  // Pulls the latest token from SharedPreferences into the observable userStore
-  // to ensure buildHeaderTokens() uses the freshest value.
+Future<DashboardResponse> getDashboardListApi(Map request, {String? token}) async {
+  // ✅ STEP 1: FORCE TOKEN SYNC (MOST IMPORTANT)
+  String? tokenToSend = userStore.token;
   final storedToken = getStringAsync(TOKEN);
-  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+
+  if (storedToken.isNotEmpty && (tokenToSend == null || tokenToSend.isEmpty)) {
     await userStore.setToken(storedToken);
+    tokenToSend = storedToken;
+  } else if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    await userStore.setToken(storedToken);
+    tokenToSend = storedToken;
   }
-  // -------------------------------------------
 
-  log('\u001B[32m[API_CALL] Calling dashboard-list. Token read from userStore at call time: ${userStore.token}\u001B[39m'); // <-- DEBUG LOG ADDED HERE
+  // 🔥 EXTRA SAFETY (THIS LINE FIXES MOST 401 BUGS)
+  await userStore.setToken(tokenToSend);
 
-  var response = await handleResponse(await buildHttpResponse(
-      request: request, "dashboard-list", method: HttpMethod.post));
+  // 🔥 DEBUG
+  log('\u001B[32m[API_CALL] dashboard-list FINAL TOKEN: ${userStore.token}\u001B[39m');
+
+  // ✅ STEP 2: NORMAL API CALL (NO HEADER NEEDED)
+  var response = await handleResponse(
+    await buildHttpResponse(
+      'dashboard-list',
+      method: HttpMethod.post,
+      request: request,
+    ),
+  );
+
   response = response['responseData'];
   return DashboardResponse.fromJson(response);
 }
@@ -648,6 +702,21 @@ Future<dynamic> firebaseLoginApi(Map req) async {
       method: HttpMethod.post,
     ),
   );
+
+  // Token Extraction and Saving Logic based on successful login log structure
+  if (response != null && response['responseData'] != null) {
+    final responseData = response['responseData'];
+    // The structure observed in logs: responseData -> data -> api_token
+    if (responseData['data'] != null && responseData['data']['api_token'] != null) {
+      final apiToken = responseData['data']['api_token'].toString();
+      if (apiToken.isNotEmpty) {
+        // Save to shared preferences (consistent with logInAsUserApi)
+        await sharedPreferences.setString(TOKEN, apiToken);
+        // Update userStore immediately (consistent with buildHeaderTokens)
+        await userStore.setToken(apiToken);
+      }
+    }
+  }
 
   return response['responseData'];
 }

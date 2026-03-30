@@ -228,34 +228,63 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return AnimatedMarbleBackground(
       child: Scaffold(
-
         backgroundColor: Colors.black.withOpacity(0.2),
-
-        appBar: AppBar(
-          backgroundColor: Colors.black.withOpacity(0.3),
-          elevation: 0,
-          title: const Text(
-            "Clo AI",
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
 
         body: Column(
           children: [
 
+            /// 🔥 GLASS TITLE (CENTER)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.4),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.1),
+                              blurRadius: 10,
+                            )
+                          ],
+                        ),
+                        child: const Text(
+                          "Clo AI ✨",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            /// 🔥 CHAT LIST
             Expanded(
               child: ListView.builder(
-
                 reverse: true,
                 controller: scrollController,
                 padding: const EdgeInsets.all(16),
                 itemCount: questionAnswers.length,
-
                 itemBuilder: (context, index) {
-
                   final data = questionAnswers[index];
 
                   final isUser =
@@ -267,11 +296,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
               ),
             ),
 
+            /// 🔥 INPUT FIELD
             SafeArea(
               top: false,
               child: Padding(
-                padding:
-                const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 child: _buildInput(),
               ),
             ),

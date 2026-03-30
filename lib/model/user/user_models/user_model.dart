@@ -42,7 +42,7 @@ class UserModel {
   Timestamp? firebaseUpdatedAt;
   String? pin;
   String? streamToken;
-
+  String? profileCompleted; // ✅ ADD THIS
 
   UserModel(
       {this.id,
@@ -85,7 +85,8 @@ class UserModel {
       this.firebaseCreatedAt,
       this.firebaseUpdatedAt,
       this.pin,
-      this.streamToken});
+      this.streamToken,
+      this.profileCompleted,});
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -133,10 +134,12 @@ class UserModel {
         firebaseCreatedAt: json["firebase_created_at"],
         pin: json["pin"],
         streamToken: json['stream_token'],
-        firebaseUpdatedAt: json["firebase_updated_at"]);
+        firebaseUpdatedAt: json["firebase_updated_at"],
+        profileCompleted: json['profile_completed']?.toString());
   }
 
   get is_chat_available => null;
+
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();

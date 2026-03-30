@@ -19,15 +19,16 @@ import '../../utils/navigation_utils.dart';
 import '../screens.dart';
 import '../shop_webview_screen.dart';
 import '../consult/consult_now_screen.dart' as consult;
-
+import '../../store/userStore/user_store.dart';
 
 
 class DashboardScreen extends StatefulWidget {
   static String tag = '/DashboardScreen';
 
   int currentIndex;
+  final String? token;
 
-  DashboardScreen({required this.currentIndex});
+  DashboardScreen({required this.currentIndex, this.token});
 
   @override
   DashboardScreenState createState() => DashboardScreenState();
@@ -36,6 +37,7 @@ class DashboardScreen extends StatefulWidget {
 class DashboardScreenState extends State<DashboardScreen> {
   List<SymptomsCategory> mSymptomsCategory = [];
   bool isSuccess = false;
+  bool _isDataLoaded = false;
 
   onSuccess() {
     appStore.setHomeScreenUpdated(true);
@@ -56,7 +58,24 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    AddSymptomsApiCall();
+    // Wait for userStore to confirm login before attempting API calls
+    _checkLoginAndLoadData();
+  }
+
+  void _checkLoginAndLoadData() async {
+    // Polling mechanism to wait for userStore login confirmation after immediate navigation
+    if (!userStore.isLoggedIn) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (mounted) {
+        _checkLoginAndLoadData(); // Recurse
+      }
+    } else if (!_isDataLoaded) {
+      // Only call if not already loaded and widget is mounted
+      await AddSymptomsApiCall();
+      setState(() {
+        _isDataLoaded = true;
+      });
+    }
   }
 
   Future<bool> onWillPop() async {
@@ -90,7 +109,8 @@ class DashboardScreenState extends State<DashboardScreen> {
     if (!isConnected) {
       return null;
     } else {
-      List<Symptoms> SymptomsList = await AddSubSymptoms();
+      // Pass the token received during login to the API call
+      List<Symptoms> SymptomsList = await AddSubSymptoms(token: widget.token);
       for (int i = 0; i < SymptomsList.length; i++) {
         List<SymptomsData> c = [];
         for (int index = 0;

@@ -32,57 +32,66 @@ Future<void> handleFirebaseLogin({
     "name": name,
   });
 
-  if (res['status'] == true) {
-    // Extracted data from firebaseLoginApi response will be used as context,
-    // but primary navigation logic now relies on logInAsUserApi response ('value').
-    final String? firebaseUserEmail = email; // Keep email for UserStore/Stream setup if needed later
-    final String? firebaseUserId = uid; // Keep UID for Stream setup if needed later
-    final userType = res['data']['user_type'];
+  /// 🔥 IMPORTANT: Correct response parsing
+  final responseData = res['responseData'];
 
-    await setValue(IS_LOGIN, true); // Tentatively set login status true after firebase auth succeeded
+  if (responseData != null && responseData['status'] == true) {
+
+    final userData = responseData['data'];
+    final userType = userData['user_type'];
 
     if (userType != null) {
-        await setValue(USER_TYPE, userType); // Save user type
+      await setValue(USER_TYPE, userType);
     }
 
     appStore.setLoading(true);
-    log('\u001B[32m[AUTH_FLOW] Calling logInAsUserApi after successful Firebase auth...\u001B[39m'); // <-- ADDED LOG
+    log("🟢 [AUTH_FLOW] Processing firebase login response");
 
-    // Replicating logic from loginApi (sign_in_screen.dart) after successful Firebase auth
-    await logInAsUserApi({
-      "firebase_uid": uid,
-      "email": email,
-      "phone": phone,
-      "name": name,
-    }).then((value) async {
+    final String? apiToken = userData['api_token'];
+    final String? userIdStr = userData['id']?.toString();
 
-      if (value.status == false) {
-        toast(value.message);
-        appStore.setLoading(false);
-        return;
+    /// 🔥 FIXED: correct path
+    final String profileCompleted =
+        responseData['profile_completed']?.toString() ?? "0";
+
+    log("🟡 Profile Completed: $profileCompleted");
+
+    if (userData['status'] == statusActive &&
+        apiToken != null &&
+        userIdStr != null) {
+
+      /// ✅ SAVE TOKEN PROPERLY
+      await setValue(TOKEN, apiToken);
+      userStore.setLogin(true);
+      userStore.setUserID(int.parse(userIdStr));
+      userStore.setToken(apiToken);
+
+      /// ⚠️ IMPORTANT: set login AFTER validation
+      await setValue(IS_LOGIN, true);
+
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      /// 🔥 NAVIGATION LOGIC
+      if (profileCompleted == "0") {
+        log("➡️ Navigating to OnBoardingScreen");
+
+        AiOnboardingScreen().launch(context, isNewTask: true);
+      } else {
+        log("➡️ Navigating to Dashboard");
+
+        DashboardScreen(currentIndex: 0, token: apiToken)
+            .launch(context, isNewTask: true);
       }
 
-      if (value.data!.status == statusActive) {
+    } else {
+      toast(userData['message'] ??
+          "Login failed with status: ${userData['status']}");
+    }
 
-        setValue(TOKEN, value.data!.apiToken);
-        userStore.setLogin(true);
-        userStore.setUserID(value.data!.id!);
-        userStore.setToken(value.data!.apiToken!);
-        await setValue(IS_LOGIN, true);
+    appStore.setLoading(false);
 
-        // *** STREAM CHAT/VIDEO SETUP OMITTED ***
-        // This part requires 'client', 'streamVideo', and 'User' imports 
-        // which are not visible in auth_flow_service.dart imports.
-
-        DashboardScreen(currentIndex: 0).launch(context, isNewTask: true);
-      }
-
-      appStore.setLoading(false);
-
-    }).catchError((e) {
-      appStore.setLoading(false);
-    });
-
-    // The original profile completion logic is now replaced by the above block.
+  } else {
+    toast(res['message'] ?? "Firebase Login failed.");
+    appStore.setLoading(false);
   }
 }

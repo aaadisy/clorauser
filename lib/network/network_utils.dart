@@ -7,12 +7,21 @@ import 'package:http/http.dart' as http;
 import 'package:http/http.dart';
 import '../extensions/common.dart';
 import '../extensions/constants.dart';
+import '../extensions/shared_pref.dart';
 import '../extensions/system_utils.dart';
 import '../main.dart';
 import '../utils/app_common.dart';
 import '../utils/app_config.dart';
+import '../utils/app_constants.dart';
 
 Map<String, String> buildHeaderTokens() {
+  // 🔥 STEP 1: Always sync latest token from storage
+  final storedToken = getStringAsync(TOKEN);
+
+  if (storedToken.isNotEmpty && storedToken != userStore.token) {
+    userStore.setToken(storedToken);
+  }
+
   Map<String, String> header = {
     HttpHeaders.contentTypeHeader: 'application/json; charset=utf-8',
     HttpHeaders.cacheControlHeader: 'no-cache',
@@ -21,12 +30,20 @@ Map<String, String> buildHeaderTokens() {
     'Access-Control-Allow-Origin': '*',
   };
 
-  if (userStore.isLoggedIn) {
-    log('\u001B[33m[AUTH_DEBUG] Reading userStore.token for headers: ${userStore.token}\u001B[39m'); // <-- ADDED LOG
-    header.putIfAbsent(
-        HttpHeaders.authorizationHeader, () => 'Bearer ${userStore.token}');
+  // 🔥 STEP 2: Token handling with strong logging
+  if (userStore.token != null && userStore.token!.isNotEmpty) {
+    final token = userStore.token;
+
+    log('\u001B[32m[AUTH_SUCCESS] Token FOUND → $token\u001B[39m');
+
+    header[HttpHeaders.authorizationHeader] = 'Bearer $token';
+  } else {
+    log('\u001B[31m[AUTH_ERROR] Token MISSING or EMPTY ❌\u001B[39m');
   }
-  log(jsonEncode(header));
+
+  // 🔥 STEP 3: Final header log (safe)
+  log('\u001B[36m[HEADER] ${jsonEncode(header)}\u001B[39m');
+
   return header;
 }
 

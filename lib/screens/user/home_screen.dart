@@ -46,6 +46,7 @@ import '../../utils/utils.dart';
 import '../../widgets/animated_marble_background.dart';
 import '../common/ask_question_widget.dart';
 import '../common/expandable_text.dart';
+import '../onboarding/fu_style_question_screen.dart';
 import '../widgets/article_recommendation_widget.dart';
 import '../widgets/common_button.dart';
 import '../widgets/cycle_summary_widget.dart';
@@ -1013,6 +1014,15 @@ class _HomeScreenState extends State<HomeScreen> {
       appStore.setShowAdsBasedOnConfig(value.showAdsBasedOnConfig!);
       bool enabled = value.user?.isBackup == "off" ? false : true;
       setValue(IS_BACKUP_ENABLED, enabled);
+
+      // 🔥 DIRECT REDIRECT (NO DELAY, NO UI BUILD)
+      if (value.user?.profileCompleted == "0") {
+        log("🚨 DIRECT Onboarding Redirect");
+
+        AiOnboardingScreen().launch(context, isNewTask: true);
+
+        return; // ❗ VERY IMPORTANT (stop dashboard execution)
+      }
 
       /// Config crispChat
       if (value.crispChatWebsiteId != null &&
