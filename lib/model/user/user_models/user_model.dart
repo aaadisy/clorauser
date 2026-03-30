@@ -140,6 +140,8 @@ class UserModel {
 
   get is_chat_available => null;
 
+  get phone => null;
+
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();

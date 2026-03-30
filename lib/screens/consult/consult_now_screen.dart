@@ -87,6 +87,15 @@ class HealthExpertData {
   final String? hospitalName;
   final double? averageRating;
   final int? totalReviews;
+  final String? shortDescription;
+  final String? career;
+  final String? areaExpertise;
+  final List<String>? languages;
+  final Map<String, dynamic>? availableDays;
+  final int? consultationDuration;
+  final String? practiceType;
+  final String? gender;
+  final bool? isChatAvailable;
 
   HealthExpertData.fromJson(
       Map<String, dynamic> json, Map<String, dynamic> parentJson)
@@ -109,7 +118,18 @@ class HealthExpertData {
             ? double.tryParse(json['average_rating'].toString())
             : null,
         totalReviews = int.tryParse(
-            json['total_reviews']?.toString() ?? '0');
+            json['total_reviews']?.toString() ?? '0'),
+        shortDescription = json['short_description'],
+        career = json['career'],
+        areaExpertise = json['area_expertise'],
+        languages = json['languages'] != null
+            ? List<String>.from(json['languages'])
+            : null,
+        availableDays = json['available_days'],
+        consultationDuration = json['consultation_duration'],
+        practiceType = json['practice_type'],
+        gender = json['gender'],
+        isChatAvailable = parentJson['is_chat_available'];
 
 }
 
@@ -1218,16 +1238,18 @@ class DoctorCard extends StatelessWidget {
     if (doctor == null) return const SizedBox();
 
     final imageUrl = doctor!.healthExpertsImage ?? "";
+    final rating = doctor!.averageRating ?? 0;
+    final reviews = doctor!.totalReviews ?? 0;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08), // clean glass
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        color: const Color(0xFFF6F2F8),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
           /// 🔹 TOP ROW
@@ -1241,15 +1263,19 @@ class DoctorCard extends StatelessWidget {
                 child: imageUrl.isNotEmpty
                     ? Image.network(
                   imageUrl,
-                  height: 80,
-                  width: 80,
+                  height: 60,
+                  width: 60,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder(),
                 )
-                    : _placeholder(),
+                    : Container(
+                  height: 60,
+                  width: 60,
+                  color: Colors.white,
+                  child: const Icon(Icons.person),
+                ),
               ),
 
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
 
               /// RIGHT CONTENT
               Expanded(
@@ -1257,13 +1283,44 @@ class DoctorCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
 
-                    /// NAME
-                    Text(
-                      doctor!.displayName ?? "",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    /// NAME + RATING
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Dr. ${doctor!.displayName ?? ""}",
+                            style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+
+                        /// ⭐ RATING (ONLY IF > 0)
+                        if (rating > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.pink.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.star,
+                                    size: 16, color: Colors.pink),
+                                const SizedBox(width: 4),
+                                Text(
+                                  rating.toString(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
 
                     const SizedBox(height: 4),
@@ -1272,132 +1329,119 @@ class DoctorCard extends StatelessWidget {
                     Text(
                       doctor!.tagLine ?? "",
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 16,
+                        color: Colors.pink,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    /// EDUCATION + EXPERIENCE
+                    Text(
+                      "${doctor!.qualification ?? ""} - ${doctor!.experience ?? 0} yrs exp",
+                      style: const TextStyle(
+                        fontSize: 14,
                         color: Colors.black54,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
 
                     const SizedBox(height: 10),
 
-                    /// EXPERIENCE + FEE (INLINE CLEAN)
+                    /// LOCATION + PRICE
                     Row(
                       children: [
-                        const Icon(Icons.work_outline, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          "${doctor!.experience ?? 0} yrs",
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
 
-                        const SizedBox(width: 12),
-
-                        const Text("•",
-                            style: TextStyle(color: Colors.grey)),
-
-                        const SizedBox(width: 12),
-
-                        const Icon(Icons.currency_rupee, size: 14),
-                        Text(
-                          "${doctor!.fee ?? 0}",
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    /// RATING + REVIEWS
-                    Row(
-                      children: [
-                        const Icon(Icons.star,
-                            size: 14, color: Colors.orange),
-                        const SizedBox(width: 4),
-                        Text(
-                          "${doctor!.averageRating ?? 0}",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          "(${doctor!.totalReviews ?? 0} reviews)",
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    /// LOCATION
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on,
-                            size: 14, color: Colors.black54),
-                        const SizedBox(width: 4),
+                        /// LOCATION
                         Expanded(
-                          child: Text(
-                            doctor!.city ?? "Location not available",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on,
+                                  size: 16, color: Colors.black54),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  doctor!.hospitalName ??
+                                      doctor!.city ??
+                                      "Location",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        /// PRICE
+                        Text(
+                          "₹${doctor!.fee ?? 0}",
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
+
+                    /// 🧾 REVIEWS (ONLY IF > 0)
+                    if (reviews > 0) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        "$reviews reviews",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black45,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-              )
+              ),
             ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
-          /// 🔥 BUTTON (already good)
+          /// 🔥 GRADIENT BUTTON (PINK MIX)
           SizedBox(
             width: double.infinity,
-            height: 45,
-            child: ElevatedButton(
-              onPressed: () => onConsultNowTap(doctor!),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ColorUtils.colorPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                "Book Consultation",
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+            height: 50,
+            child: Material(
+              color: Colors.transparent, // VERY IMPORTANT
+              child: InkWell(
+                onTap: () => onConsultNowTap(doctor!),
+                borderRadius: BorderRadius.circular(30),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFE8C6FF), // light pink purple
+                        Color(0xFFFFC1CC), // soft pink
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      "Consult Now",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           )
         ],
       ),
-    );
-  }
-
-  Widget _placeholder() {
-    return Container(
-      height: 80,
-      width: 80,
-      color: Colors.white.withOpacity(0.2),
-      child: const Icon(Icons.person, size: 40),
     );
   }
 }

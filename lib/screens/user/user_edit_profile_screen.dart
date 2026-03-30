@@ -60,25 +60,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    setControllers();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setControllers();
+    });
+
     logScreenView("User Edit Profile screen");
   }
 
-  setControllers() {
+  void setControllers() {
     ageOptions = generateBirthYearOptions();
+
+    final user = userStore.user;
+
+    if (user == null) return;
+
     setState(() {
-      mFNameCont.text = userStore.user!.firstName!;
-      mLNameCont.text = userStore.user!.lastName!;
-      mEmailCount.text = userStore.user!.email!;
-      selectedAge = userStore.user!.age != null
-          ? getBirthYearFromAge(userStore.user!.age!)
+      mFNameCont.text = user.firstName ?? "";
+      mLNameCont.text = user.lastName ?? "";
+      mEmailCount.text = user.email ?? "";
+
+      selectedAge = user.age != null
+          ? getBirthYearFromAge(user.age!)
           : null;
+
       mPassCount.text = getStringAsync(PASSWORD);
-      mUserTypeCount.text = (userStore.user!.userType == ANONYMOUS)
+
+      mUserTypeCount.text = (user.userType == ANONYMOUS)
           ? "Anonymous User"
           : "App User";
 
-      isEnabled = userStore.user!.userType == ANONYMOUS ? false : true;
+      isEnabled = user.userType == ANONYMOUS ? false : true;
     });
   }
 
@@ -101,11 +113,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return Container(
         padding: EdgeInsets.all(1),
         decoration: boxDecorationWithRoundedCorners(
-            boxShape: BoxShape.circle,
-            border: Border.all(width: 2, color: primaryColor)),
-        child: Image.file(File(image!.path),
-                height: 100, width: 100, fit: BoxFit.cover)
-            .cornerRadiusWithClipRRect(65),
+          boxShape: BoxShape.circle,
+          border: Border.all(width: 2, color: primaryColor),
+        ),
+        child: Image.file(
+          File(image!.path),
+          height: 100,
+          width: 100,
+          fit: BoxFit.cover,
+        ).cornerRadiusWithClipRRect(65),
       );
     } else {
       return Container(
@@ -116,7 +132,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
         child: ClipOval(
           child: cachedImage(
-            userStore.user!.profileImage,
+            userStore.user?.profileImage ?? "",
             fit: BoxFit.cover,
             width: 120,
             height: 120,
@@ -143,7 +159,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       multipartRequest.fields['last_name'] = mLNameCont.text;
       multipartRequest.fields['email'] = mEmailCount.text.trim();
       multipartRequest.fields['age'] =
-          getCurrentAgeFromYear(int.parse(selectedAge!)).toString() ;
+      selectedAge != null
+          ? getCurrentAgeFromYear(int.parse(selectedAge!)).toString()
+          : "0";
       final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
       multipartRequest.fields['conversion_date'] =
           formatter.format(DateTime.now().toUtc());
@@ -233,228 +251,164 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarColor: mainColorLight,
-        statusBarIconBrightness: Brightness.dark,
-      ),
-      child: Scaffold(body: Observer(
-        builder: (context) {
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
+    return Scaffold(
+      backgroundColor: Color(0xffF6F6F6),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  /// 🔹 Top Bar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Stack(
+                      Row(
                         children: [
-                          Container(
-                              height: context.height() * 0.4,
-                              color: mainColorLight),
-                          Icon(CupertinoIcons.back, color: Colors.black)
-                              .onTap(() {
+                          Icon(Icons.arrow_back).onTap(() {
                             pop();
-                          }).paddingOnly(
-                                  top: context.statusBarHeight + 16, left: 16),
-                          Container(
-                            margin:
-                                EdgeInsets.only(top: context.height() * 0.2),
-                            height: context.height() * 0.8,
-                            decoration: boxDecorationWithRoundedCorners(
-                              backgroundColor: Colors.white,
-                              borderRadius: radiusOnly(
-                                  topRight: defaultRadius,
-                                  topLeft: defaultRadius),
-                            ),
-                          ),
-                          Container(
-                            margin: EdgeInsets.only(
-                                top: context.height() * 0.1,
-                                right: 16,
-                                left: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                16.height,
-                                Stack(
-                                  alignment: Alignment.bottomRight,
-                                  children: [
-                                    profileImage(),
-                                  ],
-                                ).onTap(() {
-                                  if (context.mounted) {
-                                    if (userStore.user!.userType == ANONYMOUS) {
-                                      toast(language
-                                          .anonymousUsersCannotChangeTheProfileImage);
-                                    } else {
-                                      openBottomSheet();
-                                    }
-                                  }
-                                }).center(),
-                                18.height,
-                                Text(language.firstName,
-                                    style: primaryTextStyle()),
-                                8.height,
-                                AppTextField(
-                                  controller: mFNameCont,
-                                  readOnly:
-                                      getStringAsync(USER_TYPE) == APP_USER
-                                          ? false
-                                          : true,
-                                  textFieldType: TextFieldType.NAME,
-                                  isValidationRequired: true,
-                                  focus: mFNameFocus,
-                                  nextFocus: mLNameFocus,
-                                  suffix: mSuffixTextFieldIconWidget(
-                                      ic_user, Colors.black),
-                                  decoration: defaultInputDecoration(context,
-                                      label: language.pleaseEnterFirstName),
-                                ),
-                                8.height,
-                                Text(language.lastName,
-                                    style: primaryTextStyle()),
-                                8.height,
-                                AppTextField(
-                                  controller: mLNameCont,
-                                  readOnly:
-                                      getStringAsync(USER_TYPE) == APP_USER
-                                          ? false
-                                          : true,
-                                  textFieldType: TextFieldType.NAME,
-                                  isValidationRequired: true,
-                                  focus: mLNameFocus,
-                                  nextFocus: mEmailFocus,
-                                  suffix: mSuffixTextFieldIconWidget(
-                                      ic_user, Colors.black),
-                                  decoration: defaultInputDecoration(context,
-                                      label: language.pleaseEnterLastName),
-                                ),
-                                8.height,
-                                Text(language.WhatYearWereYouBorn,
-                                    style: primaryTextStyle()),
-                                8.height,
-                                DropdownButtonFormField<String>(
-                                  value: selectedAge,
-                                  hint: Text(language.SelectYourBirthYear),
-                                  items: ageOptions.map((age) {
-                                    return DropdownMenuItem<String>(
-                                      value: age,
-                                      child: Text(age),
-                                    );
-                                  }).toList(),
-                                  onChanged: isEnabled
-                                      ? (value) {
-                                          setState(() => selectedAge = value);
-                                        }
-                                      : null,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                  ),
-                                ),
-                                2.height,
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Text(
-                                    getAgeText(
-                                        selectedAge, userStore.user?.userType),
-                                    style: boldTextStyle(size: 12),
-                                  ),
-                                ),
-                                8.height,
-                                Text(language.email, style: primaryTextStyle()),
-                                8.height,
-                                AppTextField(
-                                  controller: mEmailCount,
-                                  readOnly: true,
-                                  textFieldType: TextFieldType.NAME,
-                                  isValidationRequired: true,
-                                  focus: mEmailFocus,
-                                  nextFocus: mUserTypeFocus,
-                                  suffix: mSuffixTextFieldIconWidget(
-                                      ic_mail, Colors.black),
-                                  decoration: defaultInputDecoration(context,
-                                      label: language.pleaseEnterEmail),
-                                ),
-                                8.height,
-                                Text(language.userType,
-                                    style: primaryTextStyle()),
-                                8.height,
-                                AppTextField(
-                                  controller: mUserTypeCount,
-                                  textCapitalization:
-                                      TextCapitalization.characters,
-                                  textFieldType: TextFieldType.NAME,
-                                  isValidationRequired: true,
-                                  focus: mUserTypeFocus,
-                                  nextFocus: null,
-                                  readOnly: true,
-                                  suffix: Icon(
-                                      getStringAsync(USER_TYPE) == APP_USER
-                                          ? Icons.verified_user
-                                          : Icons.no_accounts,
-                                      color: Colors.black),
-                                  decoration: defaultInputDecoration(context,
-                                      label: language.userType),
-                                ),
-                                16.height,
-                                // 28.height,
-                                userStore.user!.userType == APP_USER
-                                    ? AppButton(
-                                        color: mainColor,
-                                        disabledColor: mainColor,
-                                        width: context.width(),
-                                        elevation: 0,
-                                        text: language.updateProfile,
-                                        onTap: signUp,
-                                      )
-                                    : AppButton(
-                                        color: mainColor,
-                                        disabledColor: mainColor,
-                                        width: context.width(),
-                                        elevation: 0,
-                                        text: language.joinAsAnAppUser,
-                                        onTap: () async {
-                                          final isConnected =
-                                              await isNetworkAvailable();
-                                          if (!isConnected) {
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text(language
-                                                      .internetRequiredForThisAction),
-                                                  backgroundColor:
-                                                      ColorUtils.colorPrimary,
-                                                ),
-                                              );
-                                            }
-                                            return null;
-                                          } else {
-                                            _showAnimatedBottomSheet(context);
-                                          }
-                                        },
-                                      )
-                              ],
-                            ),
-                          ),
+                          }),
+                          SizedBox(width: 10),
+                          Text("Edit Profile",
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold)),
                         ],
-                      )
+                      ),
+                      Text("Save",
+                          style: TextStyle(
+                              color: Colors.purple,
+                              fontWeight: FontWeight.bold))
+                          .onTap(() {
+                        signUp();
+                      })
                     ],
                   ),
-                ),
+
+                  SizedBox(height: 20),
+
+                  /// 🔹 Profile Image
+                  Column(
+                    children: [
+                      Stack(
+                        alignment: Alignment.bottomCenter,
+                        children: [
+                          profileImage(),
+                          Positioned(
+                            bottom: -5,
+                            child: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.purple.shade100,
+                              child: Icon(Icons.camera_alt, size: 16),
+                            ),
+                          )
+                        ],
+                      ).onTap(() {
+                        openBottomSheet();
+                      }),
+                      SizedBox(height: 10),
+                      Text("Change Photo",
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ).center(),
+
+                  SizedBox(height: 30),
+
+                  /// 🔹 Personal Info
+                  Text("Personal Info",
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+
+                  SizedBox(height: 16),
+
+                  _field("FULL NAME",
+                      "${mFNameCont.text} ${mLNameCont.text}"),
+
+                  _field("PHONE NUMBER",
+                      userStore.user?.phone ?? ''),
+
+                  _field("EMAIL ADDRESS",
+                      mEmailCount.text),
+
+                  SizedBox(height: 30),
+
+                  /// 🔹 Health Info
+                  Text("Health Info",
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+
+                  SizedBox(height: 16),
+
+                  _dateField("LAST PERIOD DATE", "01/03/2026"),
+
+                  _field("CYCLE LENGTH (DAYS)", "28"),
+
+                  _field("PERIOD LENGTH (DAYS)", "5"),
+                ],
               ),
-              Center(
-                child: Loader(), // Ensure the loader is centered
-              ).visible(appStore.isLoading),
+            ),
+
+            /// 🔹 Loader
+            Center(child: Loader()).visible(appStore.isLoading),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _field(String title, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontWeight: FontWeight.w600)),
+        SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(value),
+        ),
+        SizedBox(height: 14),
+      ],
+    );
+  }
+
+  Widget _dateField(String title, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontWeight: FontWeight.w600)),
+        SizedBox(height: 6),
+        Container(
+          padding: EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(value),
+              Icon(Icons.calendar_today, size: 18)
             ],
-          );
-        },
-      )),
+          ),
+        ),
+        SizedBox(height: 14),
+      ],
     );
   }
 
