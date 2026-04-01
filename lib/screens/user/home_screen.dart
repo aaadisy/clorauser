@@ -44,6 +44,7 @@ import '../../network/rest_api.dart';
 import '../../service/reminder_service.dart';
 import '../../utils/utils.dart';
 import '../../widgets/animated_marble_background.dart';
+import '../../widgets/home_action_grid.dart';
 import '../common/ask_question_widget.dart';
 import '../common/expandable_text.dart';
 import '../onboarding/fu_style_question_screen.dart';
@@ -1306,7 +1307,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-
+                      
+                      /// 🔥 ADDED ACTIONS GRID
+                      const HomeActionGrid(),
 
                       /// 🔽 CONTENT SECTION
                       appStore.isLoading
