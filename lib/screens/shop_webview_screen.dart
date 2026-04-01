@@ -29,7 +29,7 @@ class _ShopWebViewScreenState extends State<ShopWebViewScreen> {
         ),
       )
       ..loadRequest(
-        Uri.parse("https://autumnhealthlabs.com/shop"),
+        Uri.parse("https://shop.getclora.com/"),
       );
   }
 

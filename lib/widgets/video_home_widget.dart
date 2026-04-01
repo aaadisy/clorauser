@@ -18,114 +18,152 @@ class _VideoHomeWidgetState extends State<VideoHomeWidget> {
   @override
   Widget build(BuildContext context) {
     if (widget.categories.isEmpty) return const SizedBox.shrink();
-    
+
     var selectedCategory = widget.categories[selectedIndex];
     var videos = selectedCategory.videos ?? [];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          /// Header Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Video Library",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ViewAllScreen(
-                        categoryId: selectedCategory.id ?? 0,
-                        categoryName: selectedCategory.name ?? '',
-                        videos: videos,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text(
-                  "View All",
-                  style: TextStyle(color: Colors.pink, fontWeight: FontWeight.w600),
-                ),
-              )
-            ],
-          ),
-          const SizedBox(height: 12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
 
-          /// Category Pills
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: widget.categories.length,
-              itemBuilder: (context, index) {
-                var category = widget.categories[index];
-                bool isSelected = index == selectedIndex;
-                return GestureDetector(
-                  onTap: () => setState(() => selectedIndex = index),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFFDE2F3) : const Color(0xFFF6F2F8),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Center(
-                      child: Text(
-                        category.name ?? '',
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.black54,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+        /// 🔥 HEADER
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Video Library",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ViewAllScreen(
+                      categoryId: selectedCategory.id ?? 0,
+                      categoryName: selectedCategory.name ?? '',
+                      videos: videos,
                     ),
                   ),
                 );
               },
-            ),
-          ),
-          const SizedBox(height: 16),
+              child: const Text(
+                "View All",
+                style: TextStyle(color: Colors.pink, fontWeight: FontWeight.w600),
+              ),
+            )
+          ],
+        ),
 
-          /// Video Items List
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: videos.length > 2 ? 2 : videos.length,
+        const SizedBox(height: 12),
+
+        /// 🔥 CATEGORY PILLS
+        SizedBox(
+          height: 40,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: widget.categories.length,
             itemBuilder: (context, index) {
-              var video = videos[index];
+              var category = widget.categories[index];
+              bool isSelected = index == selectedIndex;
+
               return GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayScreen(url: video.videoUrl ?? ''))),
+                onTap: () => setState(() => selectedIndex = index),
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF6F2F8),
+                    color: isSelected
+                        ? const Color(0xFFFDE2F3)
+                        : Colors.white.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(video.thumbnailUrl ?? '', width: 80, height: 60, fit: BoxFit.cover),
+                  child: Center(
+                    child: Text(
+                      category.name ?? '',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(video.title ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
-                      ),
-                      const Icon(Icons.play_circle_outline, color: Colors.grey),
-                    ],
+                    ),
                   ),
                 ),
               );
             },
           ),
-        ],
-      ),
+        ),
+
+        const SizedBox(height: 16),
+
+        /// 🔥 GRID VIDEOS (MAIN FIX)
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: videos.length > 4 ? 4 : videos.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: 0.85,
+          ),
+          itemBuilder: (context, index) {
+            var video = videos[index];
+
+            return GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => VideoPlayScreen(url: video.videoUrl ?? ''),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  /// 🔥 THUMBNAIL
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Image.network(
+                          video.thumbnailUrl ?? '',
+                          height: 110,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+
+                        /// PLAY BUTTON
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
+                          child: const Icon(Icons.play_arrow, size: 18),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  /// 🔥 TITLE
+                  Text(
+                    video.title ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

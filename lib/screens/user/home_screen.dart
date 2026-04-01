@@ -1144,7 +1144,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           padding: const EdgeInsets.all(16.0),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.transparent, // 🔥 IMPORTANT
             borderRadius: BorderRadius.circular(defaultRadius),
           ),
           width: double.infinity,
@@ -1363,17 +1363,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       /// 🔥 ADDED ACTIONS GRID
                       const HomeActionGrid(),
 
+                      _buildGlassVideoSection(),
+
+                      // add some space
+                      SizedBox(height: 16),
+
+
                       /// 🔽 CONTENT SECTION
                       appStore.isLoading
                           ? Center(child: Loader()).paddingSymmetric(vertical: 8)
-                          : Transform.translate(
-                        offset: Offset(0, -30),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(30)),
-                          ),
+                          :
+                      Transform.translate(
+                        offset: Offset(0, -10), // 👈 overlap fix
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), // 🔥 SAME AS SWITCHER
+                            child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.25), // 🔥 GLASS
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.35),
+                                  ),
+                                ),
                           child: Column(
                             children: [
 
@@ -1427,18 +1440,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               SizedBox(height: 40),
 
-                              /// 🎬 VIDEO SECTION
-                              isVideoLoading
-                                  ? Padding(
-                                padding: EdgeInsets.all(20),
-                                child: CircularProgressIndicator(),
-                              )
-                                  : VideoHomeWidget(categories: videoCategories),
 
-                              SizedBox(height: 30),
                             ],
                           ),
                         ),
+                      ),
+                          ),
                       ),
                     ],
                   )
@@ -1447,6 +1454,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         )
+    );
+  }
+
+  Widget _buildGlassVideoSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: Colors.white.withOpacity(0.25),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.35),
+              ),
+            ),
+
+            child: isVideoLoading
+                ? const Center(child: CircularProgressIndicator())
+                : VideoHomeWidget(categories: videoCategories),
+          ),
+        ),
+      ),
     );
   }
 
