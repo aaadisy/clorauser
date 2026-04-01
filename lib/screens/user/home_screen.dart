@@ -109,127 +109,53 @@ class _HomeScreenState extends State<HomeScreen> {
   List<VideoCategoryModel> videoCategories = [];
   bool isVideoLoading = true;
   final String _assistantId = "asst_7oxnV6JsbZ2rSsgNgEfQ1un2";
-  Widget _buildGlassGoalSwitcher_bkp() {
-    final isCycle = userStore.goalIndex == 0;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final segmentWidth = (width - 16) / 2;
+  String _getGreeting() {
+    var hour = DateTime.now().hour;
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  }
 
-        return Container(
-          height: 56,
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(40),
-            color: Colors.white.withOpacity(0.18),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.35),
+  Widget _buildUserProfileHeader() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Color(0xFFFDE2F3),
+            backgroundImage: userStore.user?.profileImage != null && userStore.user!.profileImage!.isNotEmpty
+                ? CachedNetworkImageProvider(userStore.user!.profileImage!)
+                : null,
+            child: userStore.user?.profileImage == null || userStore.user!.profileImage!.isEmpty
+                ? Icon(Icons.person, color: Color(0xFFEC4899))
+                : null,
+          ),
+          12.width,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Hello, ${userStore.user?.displayName ?? 'User'}",
+                  style: boldTextStyle(size: 16, color: Colors.black87),
+                ),
+                Text(
+                  _getGreeting(),
+                  style: secondaryTextStyle(size: 12, color: Colors.black54),
+                ),
+              ],
             ),
           ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-
-              /// 🔥 SLIDING ACTIVE BACKGROUND
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                left: isCycle ? 0 : segmentWidth,
-                top: 0,
-                bottom: 0,
-                width: segmentWidth,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(32),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFDA4AF),
-                        Color(0xFFF472B6),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0xFFF472B6).withOpacity(0.5),
-                        blurRadius: 18,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              /// CENTER SLIDING INDICATOR ICON
-              AnimatedAlign(
-                duration: const Duration(milliseconds: 300),
-                alignment:
-                isCycle ? Alignment.centerLeft : Alignment.centerRight,
-                curve: Curves.easeInOut,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                  child: Icon(
-                    isCycle
-                        ? Icons.favorite_rounded
-                        : Icons.pregnant_woman_rounded,
-                    size: 16,
-                    color: const Color(0xFFF472B6),
-                  ),
-                ),
-              ),
-
-              /// TEXT ROW
-              Row(
-                children: [
-
-                  /// TRACK CYCLE
-                  Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: () => _handleGoalSwitch(0),
-                      child: Center(
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 250),
-                          style: boldTextStyle(
-                            size: 14,
-                            color:
-                            isCycle ? Colors.white : Colors.black87,
-                          ),
-                          child: Text(language.trackCycle),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  /// TRACK PREGNANCY
-                  Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: () => _handleGoalSwitch(1),
-                      child: Center(
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 250),
-                          style: boldTextStyle(
-                            size: 14,
-                            color:
-                            !isCycle ? Colors.white : Colors.black87,
-                          ),
-                          child: Text(language.trackPregnancy),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+          Icon(Icons.notifications_none, color: Colors.black54),
+        ],
+      ),
     );
   }
 
@@ -465,47 +391,6 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-
-  void _handleGoalSwitch_bkp(int newIndex) async {
-    if (newIndex == userStore.goalIndex) return;
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(language.confirmation),
-        content: Text(language.areYouSureYouWantToSwitchYourGoalType),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(language.no),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: mainColor,
-            ),
-            onPressed: () async {
-              Navigator.pop(context);
-
-              /// 🔥 IMPORTANT FIX
-              await setValue(GOAL, newIndex);
-
-              userStore.setGoal(newIndex);
-
-              setState(() {});
-
-              /// reload data instead of relaunching dashboard
-              init(isDayClick: false);
-            },
-            child: Text(language.yes),
-          ),
-        ],
-      ),
-    );
-  }
-
 
   // Objects
   ChatGptInsight? chatgptInsights;
@@ -1305,25 +1190,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 pinned: true,
                 automaticallyImplyLeading: false,
                 elevation: 0,
-                expandedHeight: 110,
-                title: _buildGlassGoalSwitcher(),
+                expandedHeight: 180,
                 flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).padding.top + 10,
-                      left: 16,
-                      right: 16,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-
-                        /// TITLE
-
-
-                        12.height,
-                      ],
-                    ),
+                  background: Column(
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).padding.top + 10),
+                      _buildUserProfileHeader(),
+                      _buildGlassGoalSwitcher(),
+                    ],
                   ),
                 ),
               ),
