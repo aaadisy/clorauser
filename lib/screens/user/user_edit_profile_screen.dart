@@ -142,81 +142,116 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+
+// ================= SIGNUP FUNCTION FIX =================
   void signUp() async {
     hideKeyboard(context);
     unFocusNodes();
-    if (formKey2.currentState?.validate() ??
-        formKey.currentState?.validate() ??
-        false) {
-      if (userStore.user!.userType! != APP_USER) {
-        pop();
-      }
-      appStore.setLoading(true);
-      MultipartRequest multipartRequest =
-          await getMultiPartRequest('update-profile');
-      multipartRequest.fields['id'] = userStore.user!.id.toString();
-      multipartRequest.fields['first_name'] = mFNameCont.text;
-      multipartRequest.fields['last_name'] = mLNameCont.text;
-      multipartRequest.fields['email'] = mEmailCount.text.trim();
-      multipartRequest.fields['age'] =
-      selectedAge != null
-          ? getCurrentAgeFromYear(int.parse(selectedAge!)).toString()
-          : "0";
-      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-      multipartRequest.fields['conversion_date'] =
-          formatter.format(DateTime.now().toUtc());
-      if (mPassCount.text.trim().isNotEmpty)
-        multipartRequest.fields['password'] = mPassCount.text.trim();
-      multipartRequest.fields['user_type'] = APP_USER;
-      if (image != null)
-        multipartRequest.files.add(
-          await MultipartFile.fromPath(
-            'profile_image',
-            image!.path,
-          ),
-        );
-      multipartRequest.headers.addAll(buildHeaderTokens());
-      sendMultiPartRequest(
-        multipartRequest,
-        onSuccess: (data) async {
-          appStore.setLoading(false);
-          String rawData = data;
-          Map<String, dynamic> decodedData = jsonDecode(rawData);
-          bool status = decodedData['responseData']['status'];
-          String message = decodedData['responseData']['message'];
 
-          if (status == true) {
-            UserModel value =
-                UserModel.fromJson(decodedData['responseData']['data']);
-            if (status == true) {
-              setValue(USER_TYPE, APP_USER);
-              setValue(USER_ID, value.id);
-              setValue(EMAIL, value.email);
-              setValue(FIRSTNAME, value.firstName);
-              setValue(LASTNAME, value.lastName);
-              setValue(PASSWORD, mPassCount.text.trim());
-              setValue(IS_LOGIN, true);
-              userStore.setUserModelData(value);
-              setLogInValue(isFromEducationScreen: true);
-              appStore.setLoading(false);
-              mUserTypeCount.text = "App User";
-              isEnabled = true;
-              setState(() {});
-              toast(message);
-            }
-          }
-        },
-        onError: (error) {
-          log("Multipart Request " + multipartRequest.fields.length.toString());
-          toast(error.toString());
-          appStore.setLoading(false);
-        },
-      ).catchError((e) {
-        appStore.setLoading(false);
-        toast(e.toString());
-      });
+    // ✅ FIX: validation issue solve
+    if (formKey2.currentState != null) {
+      if (!formKey2.currentState!.validate()) return;
     }
+
+    // ✅ prevent empty submit
+    if (mFNameCont.text.trim().isEmpty &&
+        mLNameCont.text.trim().isEmpty &&
+        mEmailCount.text.trim().isEmpty &&
+        image == null) {
+      toast("Please update something");
+      return;
+    }
+
+    appStore.setLoading(true);
+
+    MultipartRequest multipartRequest =
+    await getMultiPartRequest('update-profile');
+
+    multipartRequest.fields['id'] = userStore.user!.id.toString();
+    multipartRequest.fields['first_name'] = mFNameCont.text.trim();
+    multipartRequest.fields['last_name'] = mLNameCont.text.trim();
+    multipartRequest.fields['email'] = mEmailCount.text.trim();
+
+    multipartRequest.fields['age'] =
+    selectedAge != null
+        ? getCurrentAgeFromYear(int.parse(selectedAge!)).toString()
+        : "0";
+
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    multipartRequest.fields['conversion_date'] =
+        formatter.format(DateTime.now().toUtc());
+
+    if (mPassCount.text.trim().isNotEmpty) {
+      multipartRequest.fields['password'] = mPassCount.text.trim();
+    }
+
+    multipartRequest.fields['user_type'] = APP_USER;
+
+    // ✅ IMAGE UPLOAD FIX
+    if (image != null) {
+      multipartRequest.files.add(
+        await MultipartFile.fromPath(
+          'profile_image',
+          image!.path,
+        ),
+      );
+    }
+
+    multipartRequest.headers.addAll(buildHeaderTokens());
+
+    sendMultiPartRequest(
+      multipartRequest,
+      onSuccess: (data) async {
+        print("API RESPONSE: $data"); // 🔥 DEBUG
+
+        appStore.setLoading(false);
+
+        Map<String, dynamic> decodedData = jsonDecode(data);
+
+        bool status = decodedData['responseData']['status'];
+        String message =
+            decodedData['responseData']['message'] ?? "Profile updated";
+
+        if (status == true) {
+          UserModel value =
+          UserModel.fromJson(decodedData['responseData']['data']);
+
+          setValue(USER_TYPE, APP_USER);
+          setValue(USER_ID, value.id);
+          setValue(EMAIL, value.email);
+          setValue(FIRSTNAME, value.firstName);
+          setValue(LASTNAME, value.lastName);
+          setValue(PASSWORD, mPassCount.text.trim());
+          setValue(IS_LOGIN, true);
+
+          userStore.setUserModelData(value);
+
+          setLogInValue(isFromEducationScreen: true);
+
+          setState(() {
+            image = null;
+            mUserTypeCount.text = "App User";
+            isEnabled = true;
+          });
+
+          toast(message);
+        } else {
+          toast(message);
+        }
+      },
+      onError: (error) {
+        print("ERROR: $error");
+        appStore.setLoading(false);
+        toast(error.toString());
+      },
+    ).catchError((e) {
+      print("CATCH ERROR: $e");
+      appStore.setLoading(false);
+      toast(e.toString());
+    });
   }
+
+
 
   void _showAnimatedBottomSheet(BuildContext context) {
     showModalBottomSheet(
@@ -324,14 +359,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                   SizedBox(height: 16),
 
-                  _field("FULL NAME",
-                      "${mFNameCont.text} ${mLNameCont.text}"),
+                _field("FULL NAME", "${mFNameCont.text} ${mLNameCont.text}")
+                    .onTap(() {
+                  _showAnimatedBottomSheet(context);
+                }),
 
                   _field("PHONE NUMBER",
                       userStore.user?.phone ?? ''),
 
-                  _field("EMAIL ADDRESS",
-                      mEmailCount.text),
+                _field("EMAIL ADDRESS", mEmailCount.text)
+                    .onTap(() {
+                  _showAnimatedBottomSheet(context);
+                }),
 
                   SizedBox(height: 30),
 

@@ -181,7 +181,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Hello, ${userStore.user?.displayName ?? 'User'}",
+                    "Hello, ${
+                    ((userStore.user?.firstName?.isNotEmpty ?? false) ||
+                        (userStore.user?.lastName?.isNotEmpty ?? false))
+                      ? "${userStore.user?.firstName ?? ''} ${userStore.user?.lastName ?? ''}".trim()
+                      : (userStore.user?.displayName?.isNotEmpty ?? false)
+                      ? userStore.user!.displayName!
+                      : 'User'
+              }",
                           style: boldTextStyle(
                             size: 16,
                             color: Colors.black87,
