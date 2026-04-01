@@ -119,44 +119,103 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildUserProfileHeader() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Color(0xFFFDE2F3),
-            backgroundImage: userStore.user?.profileImage != null && userStore.user!.profileImage!.isNotEmpty
-                ? CachedNetworkImageProvider(userStore.user!.profileImage!)
-                : null,
-            child: userStore.user?.profileImage == null || userStore.user!.profileImage!.isEmpty
-                ? Icon(Icons.person, color: Color(0xFFEC4899))
-                : null,
-          ),
-          12.width,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Hello, ${userStore.user?.displayName ?? 'User'}",
-                  style: boldTextStyle(size: 16, color: Colors.black87),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), // 🔥 glass blur
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+
+                /// 🔥 GLASS LOOK
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.25),
+                    Colors.white.withOpacity(0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                Text(
-                  _getGreeting(),
-                  style: secondaryTextStyle(size: 12, color: Colors.black54),
+
+                /// 🔥 subtle border for depth
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
                 ),
-              ],
+
+                /// optional soft shadow (3D feel)
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+
+              child: Row(
+                children: [
+                  /// PROFILE IMAGE
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Color(0xFFFDE2F3),
+                    backgroundImage: userStore.user?.profileImage != null &&
+                        userStore.user!.profileImage!.isNotEmpty
+                        ? CachedNetworkImageProvider(
+                        userStore.user!.profileImage!)
+                        : null,
+                    child: userStore.user?.profileImage == null ||
+                        userStore.user!.profileImage!.isEmpty
+                        ? Icon(Icons.person, color: Color(0xFFEC4899))
+                        : null,
+                  ),
+
+                  12.width,
+
+                  /// TEXT
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Hello, ${userStore.user?.displayName ?? 'User'}",
+                          style: boldTextStyle(
+                            size: 16,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          _getGreeting(),
+                          style: secondaryTextStyle(
+                            size: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  /// NOTIFICATION ICON
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(0.6),
+                    ),
+                    child: Icon(
+                      Icons.notifications_none,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          Icon(Icons.notifications_none, color: Colors.black54),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -449,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     logScreenView("Home screen");
-    checkIfAppIsUpdate(context);
+   // checkIfAppIsUpdate(context);
     getMenstrualCycleData();
     // configureCrispChat();
     init(isDayClick: false);
@@ -1214,14 +1273,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           minHeight: kPinkHeight - 40,
                         ),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFFFFE4EC),
-                              Color(0xFFFDE2F3),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: Colors.transparent, // 🔥 IMPORTANT
                         ),
                         child: Center(
 
@@ -1236,8 +1288,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   shape: BoxShape.circle,
                                   gradient: LinearGradient(
                                     colors: [
-                                      Color(0xFFFFD6E0),
-                                      Color(0xFFFBCFE8),
+                                      Color(0xFFFFD6E0).withOpacity(0.4),
+                                      Color(0xFFFBCFE8).withOpacity(0.4),
                                     ],
                                   ),
                                   boxShadow: [
@@ -1307,7 +1359,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                      
+
                       /// 🔥 ADDED ACTIONS GRID
                       const HomeActionGrid(),
 
@@ -1598,21 +1650,12 @@ class _HomeScreenState extends State<HomeScreen> {
           /// 🌸 FLO SOFT GRADIENT
           gradient: LinearGradient(
             colors: [
-              Color(0xFFFFF1F5), // light pink
-              Color(0xFFFDE2F3), // soft pink
+              Colors.transparent,
+              Colors.transparent,
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
           ),
 
-          /// ✨ VERY SOFT SHADOW
-          boxShadow: [
-            BoxShadow(
-              color: Colors.pink.withOpacity(0.08),
-              blurRadius: 15,
-              offset: Offset(0, 6),
-            ),
-          ],
+          /// ✨ REMOVED SHADOW
         ),
 
         child: Column(
@@ -1643,8 +1686,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
 
-                  /// 🫧 INNER WHITE CARD (important!)
-                  color: Colors.white,
+                  /// 🫧 INNER CONTAINER TRANSPARENT
+                  color: Colors.transparent,
                 ),
 
                 child: graphWidget,
