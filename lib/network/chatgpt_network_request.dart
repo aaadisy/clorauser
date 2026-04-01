@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import '../main.dart';
 import '../extensions/shared_pref.dart';
@@ -121,6 +122,67 @@ class ChatGptService {
     final data = jsonDecode(response.body);
     return List<Map<String, dynamic>>.from(data['data']);
   }
+
+  // ==========================================================
+  // MULTIMODAL CHAT (IMAGE + TEXT) using Chat Completions API (GPT-4o)
+  // This bypasses the existing thread management for a direct, single-turn vision query.
+  // ==========================================================
+  static Future<String> sendMessageWithImageUrl({
+    required String textContent,
+    required String imageUrl,
+  }) async {
+    final dio = Dio(); 
+
+    // Use Chat Completions endpoint, which supports vision models like gpt-4o and remote URLs.
+    final ChatCompletionsEndpoint = '$_baseUrl/chat/completions';
+
+    final Map<String, dynamic> requestBody = {
+      "model": "gpt-4o", // Use a multimodal model
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": textContent,
+            },
+            {
+              "type": "image_url",
+              "image_url": {
+                "url": imageUrl, // Send the public URL from your server
+              }
+            }
+          ]
+        }
+      ],
+      "max_tokens": 1000
+    };
+
+    final response = await dio.post(
+      ChatCompletionsEndpoint,
+      options: Options(
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_apiKey',
+        }
+      ),
+      data: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200) {
+        final data = response.data;
+        
+        if (data is Map && data.containsKey('choices') && data['choices'] is List && data['choices'].isNotEmpty) {
+             // Extract content from the first choice's message
+             return data['choices'][0]['message']['content'] ?? "No response text found.";
+        } else {
+             return "AI returned success status but no choice content.";
+        }
+    } else {
+        throw Exception("Chat Completions request failed with status: ${response.statusCode}. Data: ${response.data}");
+    }
+  }
+
 
   // ==========================================================
   // STRUCTURED JSON METHODS
