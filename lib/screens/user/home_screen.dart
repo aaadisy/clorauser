@@ -1408,13 +1408,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), // 🔥 SAME AS SWITCHER
                             child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.25), // 🔥 GLASS
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.35),
-                                  ),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent, // ✅ FIXED
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.15), // light glass border
                                 ),
+                              ),
                           child: Column(
                             children: [
 

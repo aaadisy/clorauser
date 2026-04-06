@@ -46,6 +46,7 @@ class MyConsultationModel {
   final String? career;
   final String consultationType;
   final String status;
+  final String rating;
   final String amount;
   final String? pdfPath;
   final String createdAt;
@@ -56,6 +57,7 @@ class MyConsultationModel {
     required this.doctorName,
     required this.consultationType,
     required this.status,
+    required this.rating,
     required this.amount,
     required this.createdAt,
     required this.doctorId,
@@ -72,6 +74,7 @@ class MyConsultationModel {
       doctorName: json['doctor_name'] ?? "",
       consultationType: json['consultation_type'] ?? "",
       status: json['status'] ?? "",
+      rating: json['rating'] ?? "",
       amount: json['amount'].toString(),
       createdAt: json['created_at'] ?? "",
       pdfPath: json['pdf_path'],
@@ -255,7 +258,6 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
         // ❌ OPEN नहीं करना (as per your requirement)
         // OpenFile.open(filePath);
-
       } else {
         toast("Download failed");
       }
@@ -263,6 +265,142 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       print("Download error: $e");
       toast("Download failed");
     }
+  }
+
+  Future<void> submitRating({
+    required int consultationId,
+    required int rating,
+  }) async {
+    try {
+      print("📡 HIT API: myconsultation/rate");
+
+      var response = await handleResponse(
+        await buildHttpResponse(
+          'myconsultation/rate',
+          method: HttpMethod.post,
+          request: {
+            "consultation_id": consultationId,
+            "rating": rating,
+          },
+        ),
+      );
+
+      print("📥 API RESPONSE: $response");
+
+      if (response['status'] == true) {
+        toast(response['message'] ?? "Rating submitted");
+
+        /// 🔄 refresh
+        await _fetchMyConsultations();
+      } else {
+        throw Exception(response['message']);
+      }
+    } catch (e) {
+      print("❌ API ERROR: $e");
+      rethrow;
+    }
+  }
+
+  void showRatingDialog(BuildContext context, MyConsultationModel item) {
+    double rating = 0;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ❗ user bahar tap karke close na kare
+      builder: (_) {
+        bool isLoading = false;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text("Rate Doctor"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  /// ⭐ STAR SELECT
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        icon: Icon(
+                          index < rating ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            rating = index + 1.0;
+                          });
+                        },
+                      );
+                    }),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  /// 🔄 LOADER
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: CircularProgressIndicator(),
+                    ),
+                ],
+              ),
+              actions: [
+                /// ❌ CANCEL
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+
+                /// ✅ SUBMIT
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (rating == 0) {
+                            toast("Please select rating");
+                            return;
+                          }
+
+                          setState(() {
+                            isLoading = true;
+                          });
+
+                          /// 🔥 LOG START
+                          print("📤 RATING API CALL START");
+                          print("consultation_id: ${item.id}");
+                          print("rating: $rating");
+
+                          try {
+                            await submitRating(
+                              consultationId: item.id,
+                              rating: rating.toInt(),
+                            );
+
+                            print("✅ RATING SUCCESS");
+
+                            Navigator.pop(context);
+                          } catch (e) {
+                            print("❌ RATING ERROR: $e");
+
+                            toast("Something went wrong");
+
+                            setState(() {
+                              isLoading = false;
+                            });
+                          }
+                        },
+                  child: const Text("Submit"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   /// ---------------- DOCTOR LIST ----------------
@@ -376,7 +514,6 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
         }
 
         return;
-
       } catch (e) {
         print("❌ ERROR: $e");
 
@@ -412,8 +549,6 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
       /// ✅ CORRECT STRUCTURE
       if (response['status'] == true) {
-
-
         userStore.setLogin(true);
         return response['responseData'];
       }
@@ -496,7 +631,6 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
   @override
   Widget build(BuildContext context) {
-
     /// 🔥 BLOCK UNTIL STREAM READY
     if (!_isStreamReady) {
       return Scaffold(
@@ -671,6 +805,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       ],
     );
   }
+
   Duration getRemainingTime(String createdAt) {
     DateTime created = DateTime.parse(createdAt).toLocal();
     DateTime expiry = created.add(Duration(hours: 72));
@@ -689,6 +824,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
     return "Follow-up available for ${h}h ${m}m";
   }
+
   /// ============================
   /// REPORTS TAB
   /// ============================
@@ -699,7 +835,10 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
     DateTime parsedDate = DateTime.parse(item.createdAt).toLocal();
 
     String formattedDate =
-    DateFormat('dd MMM yyyy, hh:mm a').format(parsedDate);
+        DateFormat('dd MMM yyyy, hh:mm a').format(parsedDate);
+
+    final isRated =
+        item.rating != null && item.rating.toString().trim().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -718,7 +857,6 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           /// 🔝 HEADER
           Row(
             children: [
@@ -727,21 +865,62 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
                 backgroundImage: item.doctorImage != null
                     ? NetworkImage(item.doctorImage!)
                     : null,
-                child: item.doctorImage == null
-                    ? const Icon(Icons.person)
-                    : null,
+                child:
+                    item.doctorImage == null ? const Icon(Icons.person) : null,
               ),
-
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Dr. ${item.doctorName}",
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                    /// 🧑‍⚕️ NAME + ⭐ RATING
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "Dr. ${item.doctorName}",
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+
+                        /// ⭐ अगर rating NULL है → show star icon
+                        /// ⭐ अगर rating है → show value
+                        GestureDetector(
+                          onTap: !isRated
+                              ? () {
+                                  showRatingDialog(context, item); // popup
+                                }
+                              : null,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: isRated
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star,
+                                          color: Colors.amber, size: 16),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        item.rating.toString(),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  )
+                                : const Icon(
+                                    Icons.star_border_rounded,
+                                    color: Colors.amber,
+                                    size: 20,
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
 
                     Text(
@@ -755,8 +934,8 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
                     if (item.career != null)
                       Text(
                         item.career!,
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                   ],
                 ),
@@ -781,7 +960,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
           const SizedBox(height: 12),
 
-          /// ⏱ FOLLOW-UP
+          /// ⏱ FOLLOW-UP STATUS
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -793,7 +972,11 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
                 const Icon(Icons.access_time, size: 16),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(formatDuration(remaining)),
+                  child: Text(
+                    isActive
+                        ? formatDuration(remaining)
+                        : "Follow-up closed. Book a fresh consultation.",
+                  ),
                 ),
               ],
             ),
@@ -804,7 +987,6 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
           /// 🔘 BUTTONS
           Row(
             children: [
-
               /// DOWNLOAD
               Expanded(
                 child: InkWell(
@@ -851,15 +1033,44 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
               const SizedBox(width: 10),
 
-              /// FOLLOW-UP
+              /// 🔁 FOLLOW-UP / BOOK SLOT
               Expanded(
                 child: ElevatedButton(
-                  onPressed: isActive ? () {} : null,
+                  onPressed: () {
+                    if (isActive) {
+                      /// 👉 follow-up API call yaha
+                    } else {
+                      /// ✅ SAME FLOW AS CONSULT NOW
+                      final doctor = HealthExpertData.fromJson(
+                        {
+                          "id": int.tryParse(item.doctorId),
+                          "display_name": item.doctorName,
+                          "tag_line": item.specialization,
+                          "career": item.career,
+                          "health_experts_image": item.doctorImage,
+                          "fee": 0,
+                        },
+                        {
+                          "id": item.doctorId,
+                          "display_name": item.doctorName,
+                          "is_chat_available": true,
+                        },
+                      );
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DoctorDetailScreen(doctor: doctor),
+                        ),
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade200,
+                    backgroundColor:
+                        isActive ? Colors.purple.shade200 : Colors.pink,
                   ),
                   child: Text(
-                    isActive ? "Request Follow-up" : "Follow-up Closed",
+                    isActive ? "Request Follow-up" : "Book New Slot",
                   ),
                 ),
               ),
