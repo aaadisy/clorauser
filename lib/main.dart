@@ -8,8 +8,7 @@ import 'package:background_fetch/background_fetch.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:clora_user/extensions/extension_util/string_extensions.dart';
 import 'package:clora_user/extensions/extensions.dart';
-import 'package:clora_user/newsplash.dart'; // NEW: Import the new splash screen
-// import 'package:clora_user/screens/common/splash_screen.dart'; // REMOVED: Old splash screen import
+import 'package:clora_user/newsplash.dart'; 
 import 'package:clora_user/service/notification_service.dart';
 import 'package:clora_user/service/reminder_service.dart';
 import 'package:clora_user/store/app_store.dart';
@@ -23,23 +22,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
-// import 'package:onesignal_flutter/onesignal.dart'; // REMOVED BROKEN IMPORT
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:terminate_restart/terminate_restart.dart';
-import 'package:stream_chat_flutter/stream_chat_flutter.dart';
-import 'package:stream_video_flutter/stream_video_flutter.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart' as chat;
+import 'package:stream_video_flutter/stream_video_flutter.dart' as video;
 
 
 import '../../utils/app_config.dart';
 import '../../utils/app_constants.dart';
-import 'ads/facebook_ads_manager.dart';
 import 'languageConfiguration/AppLocalizations.dart';
 import 'languageConfiguration/BaseLanguage.dart';
 import 'languageConfiguration/LanguageDataConstant.dart';
 import 'languageConfiguration/LanguageDefaultJson.dart';
 import 'languageConfiguration/ServerLanguageResponse.dart';
 import 'utils/app_common.dart';
-import '../../service/permission_service.dart';
 import '../../utils/dynamic_theme.dart'; 
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -59,7 +55,6 @@ List<String> scheduleRemindersData = [];
 NotificationService notificationService = NotificationService();
 final List<String> days = [MON, TUE, WED, THU, FRI, SAT, SUN];
 bool mIsEnterKey = false;
-// OneSignal oneSignal = OneSignal(); // REMOVED BROKEN DECLARATION
 int CurrentAndroidVersion = 1;
 int CurrentIOSVersion = 1;
 bool isAndroidForceUpdate = false;
@@ -67,14 +62,14 @@ bool isIOSForceUpdate = false;
 String? androidLiveUrl = "";
 String? iOSLiveUrl = "";
 String? chatgptKey;
-// final GlobalKey<State> bottomBarKey = GlobalKey<State>();
 
 // Stream Chat Client Initialization
-final client = StreamChatClient(
-  'krvywb83mwjv', // Stream Chat API Key
-  logLevel: Level.WARNING,
+final client = chat.StreamChatClient(
+  'krvywb83mwjv', 
+  logLevel: chat.Level.WARNING,
 );
-StreamVideo? streamVideo;
+video.StreamVideo? streamVideo;
+
 /// This "Headless Task" is run when app is terminated.
 @pragma('vm:entry-point')
 void backgroundFetchHeadlessTask(HeadlessTask task) async {
@@ -96,9 +91,7 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
     events = jsonDecode(json).cast<String>();
   }
 
-  // Add new event.
   events.insert(0, "$taskId@$timestamp [Headless]");
-  // Persist fetch events in SharedPreferences
   prefs.setString(EVENTS_KEY, jsonEncode(events));
   rescheduleRemindersIfMissed();
   if (taskId == 'flutter_background-fetch') {
@@ -115,14 +108,12 @@ void backgroundFetchHeadlessTask(HeadlessTask task) async {
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp();
-  }
+  await Firebase.initializeApp();
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // ✅ REQUIRED (uses google-services.json)
+  await Firebase.initializeApp(); 
   HttpOverrides.global = MyHttpOverrides();
   TerminateRestart.instance.initialize();
   MenstrualCycleWidget.init(
@@ -136,10 +127,25 @@ Future<void> main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
 
-  // DISABLED: THIS LINE CAUSED THE CRASH
-  // await FacebookAdsManager.initialize();
-
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  
+  // Request Permissions for Android/iOS
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  // Handle Token Refresh
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    if (client.state.currentUser != null) {
+       client.addDevice(
+        newToken,
+        chat.PushProvider.firebase, // 👈 FIX
+      );
+    }
+  });
+
   appStore.setLanguage(DEFAULT_LANGUAGE);
   setLogInValue(isFromEducationScreen: false);
   defaultAppButtonShapeBorder =
@@ -200,11 +206,17 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   void init() async {
     initPlatformState();
+    
+    // Foreground message handler
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+       // If message has notification data, you can show it manually or use Stream UI
+       if (message.notification != null) {
+          // You could use AwesomeNotifications or similar to show it if Stream isn't already
+       }
+    });
   }
 
-// Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    // START to check background event & notification schedule  data for testing  no need in future
     var prefs = await SharedPreferences.getInstance();
     var json = prefs.getString(EVENTS_KEY);
     if (json != null) {
@@ -218,10 +230,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         scheduleRemindersData = jsonDecode(json1).cast<String>();
       });
     }
-// END
-    // Configure BackgroundFetch.
     try {
-      // Schedule a "one-shot" custom-task in 10000ms.
       BackgroundFetch.scheduleTask(TaskConfig(
           taskId: "com.transistorsoft.customtask",
           delay: 10000,
@@ -230,8 +239,6 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
           stopOnTerminate: false,
           enableHeadless: true));
     } on Exception {}
-    
-    // Permissions check deferred to screen level where context is available.
   }
 
   @override
@@ -293,7 +300,6 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Observer(builder: (context) {
-      // 1️⃣ Apply root gradient background here.
       return Container(
         decoration: BoxDecoration(
           gradient: ColorUtils.ROOT_BACKGROUND_GRADIENT,
@@ -314,29 +320,25 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
               primary: ColorUtils.colorPrimary,
               secondary: ColorUtils.PRIMARY_CREAM,
             )
-            // FIX: Removed invalid properties from ColorScheme.copyWith
             ,
             useMaterial3: true,
           ).copyWith(
-            // 3️⃣ Remove Material shadows from Cards - CORRECTED TYPE
             cardTheme: CardThemeData(
               elevation: 0, 
               shadowColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.0)), // 4️⃣ Increased Radius
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.0)), 
             ),
-            // 4️⃣ Buttons Styling
             elevatedButtonTheme: ElevatedButtonThemeData(
               style: ElevatedButton.styleFrom(
                 backgroundColor: ColorUtils.colorPrimary, 
                 foregroundColor: Colors.white,
                 elevation: 0, 
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28.0), // Increased radius
+                  borderRadius: BorderRadius.circular(28.0), 
                 ),
                 shadowColor: Colors.transparent,
               ),
             ),
-            // 5️⃣ AppBar Styling
             appBarTheme: AppBarTheme(
               backgroundColor: Colors.transparent,
               elevation: 0,
@@ -345,12 +347,12 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
             ),
           ),
           builder: (context, child) {
-            return StreamChat(
+            return chat.StreamChat(
               client: client,
               child: child!,
             );
           },
-          home: NewSplashScreen(), // CHANGED: Using NewSplashScreen instead of old SplashScreen
+          home: NewSplashScreen(), 
           supportedLocales: getSupportedLocales(),
           localizationsDelegates: [
             GlobalMaterialLocalizations.delegate,
