@@ -7,6 +7,7 @@ Future<void> openConsultationChat({
   required BuildContext context,
   required String doctorId,
   required String doctorName,
+  String? doctorImage, // 👈 add
 }) async {
 
   final currentUser = client.state.currentUser?.id;
@@ -42,6 +43,9 @@ Future<void> openConsultationChat({
         targetUser: User(
           id: doctorId,
           name: doctorName,
+          image:  (doctorImage != null && doctorImage.isNotEmpty)
+              ? doctorImage
+              : null,
         ),
       ),
     ),

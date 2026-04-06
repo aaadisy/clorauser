@@ -991,43 +991,40 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
             children: [
               /// DOWNLOAD
               Expanded(
-                child: InkWell(
-                  onTap: item.pdfPath != null
+                child: ElevatedButton.icon(
+                  onPressed: item.pdfPath != null
                       ? () => downloadPrescription(item.pdfPath!)
-                      : null,
-                  borderRadius: BorderRadius.circular(30),
-                  child: Ink(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: item.pdfPath != null
-                          ? Colors.white
-                          : Colors.grey.shade200,
+                      : () {
+                    /// 🔥 OPEN CHAT
+                    openConsultationChat(
+                      context: context,
+                      doctorId: item.doctorId,
+                      doctorName: item.doctorName,
+                      doctorImage: item.doctorImage, // 👈 add this
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: item.pdfPath != null
+                        ? Colors.white
+                        : Colors.green, // chat ke liye alag color (optional)
+                    foregroundColor:
+                    item.pdfPath != null ? Colors.black87 : Colors.white,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.grey.shade300),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.download,
-                          size: 18,
-                          color: item.pdfPath != null
-                              ? Colors.black87
-                              : Colors.grey,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Download\nPrescription",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: item.pdfPath != null
-                                ? Colors.black87
-                                : Colors.grey,
-                          ),
-                        ),
-                      ],
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                  ),
+                  icon: Icon(
+                    item.pdfPath != null ? Icons.download : Icons.chat,
+                    size: 18,
+                  ),
+                  label: Text(
+                    item.pdfPath != null
+                        ? "Download Prescription"
+                        : "Open Chat",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -1315,6 +1312,7 @@ class ConsultationDetailScreen extends StatelessWidget {
                             context: context,
                             doctorId: consultation.doctorId,
                             doctorName: consultation.doctorName,
+                              doctorImage: consultation.doctorImage,
                           );
                         }
                       : null,
@@ -1947,6 +1945,8 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
             context: context,
             doctorId: doctorId,
             doctorName: widget.doctor.displayName ?? 'Doctor',
+            doctorImage: widget.doctor.healthExpertsImage,
+
           );
         } else {
           throw Exception(verificationData['message'] ?? 'Verification failed');
@@ -2004,6 +2004,8 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
             targetUser: User(
               id: doctorId.toString(),
               name: widget.doctor.displayName ?? 'Doctor',
+
+              image:  widget.doctor.healthExpertsImage,
             ),
           ),
         ),
