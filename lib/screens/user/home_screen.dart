@@ -543,6 +543,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> debugStorageData() async {
+    print("🧠 ================= STORAGE DEBUG START =================");
+
+    final isLogin = await getBoolAsync(IS_LOGIN);
+    final token = await getStringAsync(TOKEN);
+    final profileCompleted = await getStringAsync("PROFILE_COMPLETED");
+    final userId = await getStringAsync("USER_ID");
+
+    print("🔐 IS_LOGIN: $isLogin");
+    print("🔑 TOKEN: $token");
+    print("👤 USER_ID: $userId");
+    print("📊 PROFILE_COMPLETED: $profileCompleted");
+
+    /// Extra useful keys
+    print("🎯 GOAL: ${getIntAsync(GOAL)}");
+    print("📅 CURRENT_USER_CYCLE_DAY: ${getIntAsync(CURRENT_USER_CYCLE_DAY)}");
+    print("🤰 CURRENT_USER_PREGNANCY_WEEK: ${getIntAsync(CURRENT_USER_PREGNANCY_WEEK)}");
+
+    print("🧠 ================= STORAGE DEBUG END =================");
+  }
+
   Future<void> fetchVideos() async {
     try {
       var data = await getVideoCategories(); // 👈 REST API use

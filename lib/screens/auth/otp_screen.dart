@@ -8,8 +8,9 @@ import 'package:clora_user/utils/app_images.dart';
 
 class OtpScreen extends StatefulWidget {
   final String verificationId;
+  final String phone; // 🔥 ADD THIS
 
-  OtpScreen({required this.verificationId});
+  OtpScreen({required this.verificationId, required this.phone});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -19,15 +20,13 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
   final FirebaseAuthService _authService = FirebaseAuthService();
 
   List<TextEditingController> controllers =
-  List.generate(6, (index) => TextEditingController());
+      List.generate(6, (index) => TextEditingController());
 
-  List<FocusNode> focusNodes =
-  List.generate(6, (index) => FocusNode());
+  List<FocusNode> focusNodes = List.generate(6, (index) => FocusNode());
 
   String otpCode = "";
   int seconds = 30;
   Timer? timer;
-
 
   @override
   void initState() {
@@ -79,13 +78,11 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-
               const SizedBox(height: 20),
 
               /// BACK
@@ -136,8 +133,8 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
                       keyboardType: TextInputType.number,
                       maxLength: 1,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         counterText: "",
                         filled: true,
@@ -165,18 +162,18 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
               /// ⏳ RESEND
               seconds == 0
                   ? GestureDetector(
-                onTap: () async {
-                  startTimer();
-                  // TODO: call resend OTP
-                },
-                child: Text(
-                  "Resend OTP",
-                  style: TextStyle(
-                    color: Colors.pink,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
+                      onTap: () async {
+                        startTimer();
+                        // TODO: call resend OTP
+                      },
+                      child: Text(
+                        "Resend OTP",
+                        style: TextStyle(
+                          color: Colors.pink,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
                   : Text("Resend in 00:$seconds"),
 
               const Spacer(),
@@ -186,18 +183,29 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
                 onTap: () async {
                   String otp = getOtp();
 
+                  if (otp.length < 6) {
+                    print("❌ Invalid OTP");
+                    return;
+                  }
+
                   var user = await _authService.verifyOtp(
                     verificationId: widget.verificationId,
                     otp: otp,
                   );
 
-                  if (user != null) {
-                    await handleFirebaseLogin(
-                      context: context,
-                      uid: user.uid,
-                      phone: user.phoneNumber,
-                    );
+                  if (user == null) {
+                    print("❌ Firebase user null");
+                    return;
                   }
+
+                  /// 🔥 FINAL FIX (IMPORTANT)
+                  await handleFirebaseLogin(
+                    context: context,
+                    uid: user.uid,
+                    phone: user.phoneNumber,
+                    email: user.email ?? "",
+                    name: user.displayName ?? "User",
+                  );
                 },
                 child: Container(
                   height: 60,

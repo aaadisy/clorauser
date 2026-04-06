@@ -328,7 +328,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   Widget build(BuildContext context) {
     return AnimatedMarbleBackground(
       child: Scaffold(
-        backgroundColor: Colors.black.withOpacity(0.2),
+        backgroundColor: const Color(0xFFF5F2F8),
 
         body: Column(
           children: [
@@ -343,11 +343,32 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
+                          color: Colors.white.withOpacity(0.6),
                           borderRadius: BorderRadius.circular(30),
                           border: Border.all(color: Colors.white.withOpacity(0.4)),
                         ),
-                        child: const Text("Clo AI ✨", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ClipOval(
+                              child: Image.asset(
+                                "assets/home/clo_avatar.png",
+                                height: 30,
+                                width: 30,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              "Clo",
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF7B3FE4),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -405,7 +426,9 @@ class _AiChatScreenState extends State<AiChatScreen> {
               constraints: const BoxConstraints(maxWidth: 280),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isUser ? Colors.pink.withOpacity(0.85) : Colors.white.withOpacity(0.85),
+                color: isUser
+                    ? const Color(0xFFEADCF8)   // soft lavender
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: isAttachment
@@ -417,7 +440,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
                         _buildAttachmentBubble(imageUrl, filename)
                     ],
                   )
-                : Text(displayText, style: TextStyle(color: isUser ? Colors.white : Colors.black87, fontSize: 15)),
+                : Text(displayText, style: TextStyle(color: Colors.black87, fontSize: 15)),
             ),
           ),
         ),
@@ -467,7 +490,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
           borderRadius: BorderRadius.circular(30),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), borderRadius: BorderRadius.circular(30)),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
             child: Row(
               children: [
                 IconButton(icon: const Icon(Icons.attachment, color: Colors.pink), onPressed: _openAttachmentPicker),

@@ -171,6 +171,11 @@ flutter:
     - assets/images/clo.jpg
     - assets/images/clo.mp4
     - assets/images/gradient_animation.svg
+    - assets/home/clo_avatar.png
+    - assets/home/book.jpeg
+    - assets/home/order.jpeg
+    - assets/home/shop.jpeg
+    - assets/home/diagnostic.jpeg
     - assets/clorasplash/hormonal.png
     - assets/clorasplash/menopause.png
     - assets/clorasplash/menstruation.png

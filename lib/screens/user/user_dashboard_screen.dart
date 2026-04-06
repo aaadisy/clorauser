@@ -232,25 +232,26 @@ class DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 AiChatScreen().launch(context);
               },
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.auto_awesome,
-                    color: Colors.white,
-                    size: 22,
+              child: Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.6),
+                        blurRadius: 10,
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 2),
-                  Text(
-                    "Clo",
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
+                  child: ClipOval(
+                    child: Image.asset(
+                      "assets/home/clo_avatar.png",
+                      height: 38,
+                      width: 38,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),

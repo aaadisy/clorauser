@@ -2,8 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
+import '../../network/network_utils.dart';
 import '../../utils/stream_chat_helper.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -36,40 +40,49 @@ const Color bgColor = ColorUtils.PRIMARY_CREAM;
 
 class MyConsultationModel {
   final int id;
-  final String doctorId;
   final String doctorName;
+  final String? doctorImage;
+  final String? specialization;
+  final String? career;
   final String consultationType;
   final String status;
   final String amount;
   final String? pdfPath;
   final String createdAt;
+  final String doctorId;
 
   MyConsultationModel({
     required this.id,
-    required this.doctorId,
     required this.doctorName,
     required this.consultationType,
     required this.status,
     required this.amount,
     required this.createdAt,
+    required this.doctorId,
     this.pdfPath,
+    this.doctorImage,
+    this.specialization,
+    this.career,
   });
 
   factory MyConsultationModel.fromJson(Map<String, dynamic> json) {
     return MyConsultationModel(
       id: json['id'],
       doctorId: json['doctor_id'].toString(),
-      doctorName: json['doctor_name'] ?? '',
-      consultationType: json['consultation_type'] ?? '',
-      status: json['status'] ?? '',
+      doctorName: json['doctor_name'] ?? "",
+      consultationType: json['consultation_type'] ?? "",
+      status: json['status'] ?? "",
       amount: json['amount'].toString(),
+      createdAt: json['created_at'] ?? "",
       pdfPath: json['pdf_path'],
-      createdAt: json['created_at'] ?? '',
+
+      // ✅ NEW FIELDS
+      doctorImage: json['doctor_image'],
+      specialization: json['specialization'],
+      career: json['career'],
     );
   }
 }
-
-
 
 class HealthExpertData {
   final int? id;
@@ -117,8 +130,7 @@ class HealthExpertData {
         averageRating = json['average_rating'] != null
             ? double.tryParse(json['average_rating'].toString())
             : null,
-        totalReviews = int.tryParse(
-            json['total_reviews']?.toString() ?? '0'),
+        totalReviews = int.tryParse(json['total_reviews']?.toString() ?? '0'),
         shortDescription = json['short_description'],
         career = json['career'],
         areaExpertise = json['area_expertise'],
@@ -130,7 +142,6 @@ class HealthExpertData {
         practiceType = json['practice_type'],
         gender = json['gender'],
         isChatAvailable = parentJson['is_chat_available'];
-
 }
 
 class ConsultDoctorItem {
@@ -206,8 +217,6 @@ class ConsultNowScreen extends StatefulWidget {
 
   const ConsultNowScreen({super.key});
 
-
-
   @override
   State<ConsultNowScreen> createState() => _ConsultNowScreenState();
 }
@@ -218,7 +227,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
   String _selectedCategory = "All";
   String _searchQuery = "";
-
+  bool _isStreamReady = false;
   final List<String> _categories = [
     "All",
     "Gynecologist",
@@ -226,6 +235,36 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
     "Dermatologist",
     "Therapist",
   ];
+
+  Future<void> downloadPrescription(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final dir = await getApplicationDocumentsDirectory();
+
+        final filePath =
+            "${dir.path}/prescription_${DateTime.now().millisecondsSinceEpoch}.pdf";
+
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+
+        toast("Downloaded successfully");
+
+        print("Saved at: $filePath");
+
+        // ❌ OPEN नहीं करना (as per your requirement)
+        // OpenFile.open(filePath);
+
+      } else {
+        toast("Download failed");
+      }
+    } catch (e) {
+      print("Download error: $e");
+      toast("Download failed");
+    }
+  }
+
   /// ---------------- DOCTOR LIST ----------------
   final List<ConsultDoctorItem> _doctors = [];
   bool _isLoadingDoctors = true;
@@ -252,6 +291,11 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       }
     });
 
+    /// 🔥 ADD THIS (MOST IMPORTANT)
+    _initStreamConnect();
+
+    print("isLoggedIn: ${userStore.isLoggedIn}");
+    print("StreamUserId: ${client.state.currentUser?.id}");
     _fetchDoctors();
     _scrollController.addListener(_scrollListener);
   }
@@ -269,12 +313,115 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
   void _scrollListener() {
     if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent &&
+            _scrollController.position.maxScrollExtent &&
         !_isLoadingDoctors) {
       if (_currentPage < _lastPage) {
         _fetchDoctors(isLoadMore: true);
       }
     }
+  }
+
+  Future<void> _initStreamConnect() async {
+    print("🚀 FETCHING STREAM TOKEN FROM API");
+
+    final data = await getStreamTokenApi();
+
+    if (data == null) {
+      print("❌ API FAILED");
+      return;
+    }
+
+    final token = data['stream_token'];
+
+    if (token == null || token.isEmpty) {
+      print("❌ TOKEN EMPTY");
+      return;
+    }
+
+    await setValue("STREAM_TOKEN", token);
+
+    /// ✅ STEP 1: Already connected check
+    if (client.state.currentUser != null) {
+      print("✅ Already connected: ${client.state.currentUser!.id}");
+
+      if (mounted) {
+        setState(() {
+          _isStreamReady = true;
+        });
+      }
+      return;
+    }
+
+    int retry = 0;
+
+    while (retry < 5) {
+      try {
+        print("🔁 TRY ${retry + 1}");
+
+        await client.connectUser(
+          User(
+            id: data['user_id'].toString(),
+            name: data['name'] ?? "User",
+            image: data['image'],
+          ),
+          token,
+        );
+
+        print("✅ STREAM CONNECT SUCCESS");
+
+        if (mounted) {
+          setState(() {
+            _isStreamReady = true;
+          });
+        }
+
+        return;
+
+      } catch (e) {
+        print("❌ ERROR: $e");
+
+        /// ✅ STEP 2: Already connected error handle
+        if (e.toString().contains("Connection already available")) {
+          print("⚠️ Already connected - treating as success");
+
+          if (mounted) {
+            setState(() {
+              _isStreamReady = true;
+            });
+          }
+          return;
+        }
+      }
+
+      retry++;
+      await Future.delayed(const Duration(seconds: 1));
+    }
+
+    print("❌ STREAM FAILED");
+  }
+
+  /// 🔥 STREAM TOKEN API
+  Future<Map?> getStreamTokenApi() async {
+    try {
+      var response = await handleResponse(
+        await buildHttpResponse(
+          'get-stream-token',
+          method: HttpMethod.get,
+        ),
+      );
+
+      /// ✅ CORRECT STRUCTURE
+      if (response['status'] == true) {
+
+
+        userStore.setLogin(true);
+        return response['responseData'];
+      }
+    } catch (e) {
+      print("❌ STREAM TOKEN API ERROR: $e");
+    }
+
+    return null;
   }
 
   Future<void> _fetchDoctors({bool isLoadMore = false}) async {
@@ -286,8 +433,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
     }
 
     try {
-      final response =
-      await ConsultService.fetchDoctorList(_currentPage);
+      final response = await ConsultService.fetchDoctorList(_currentPage);
 
       setState(() {
         if (isLoadMore) {
@@ -321,8 +467,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       final token = getStringAsync(TOKEN);
 
       final response = await http.get(
-        Uri.parse(
-            "https://apis.getclora.com/api/user/myconsultation"),
+        Uri.parse("https://apis.getclora.com/api/user/myconsultation"),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -331,14 +476,11 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        final data =
-        decoded['responseData']['data'] as List;
+        final data = decoded['responseData']['data'] as List;
 
         setState(() {
-          _consultations = data
-              .map((e) =>
-              MyConsultationModel.fromJson(e))
-              .toList();
+          _consultations =
+              data.map((e) => MyConsultationModel.fromJson(e)).toList();
         });
       }
     } catch (e) {
@@ -348,14 +490,28 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
     }
   }
 
-
-
   /// ============================
   /// UI BUILD
   /// ============================
 
   @override
   Widget build(BuildContext context) {
+
+    /// 🔥 BLOCK UNTIL STREAM READY
+    if (!_isStreamReady) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text("Connecting chat..."),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       body: Column(
         children: [
@@ -365,11 +521,12 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
             backgroundColor: Colors.transparent,
             elevation: 0,
           ),
-          
+
           // ----------------- CUSTOM SEGMENT CONTROL -----------------
           _ConsultSegmentControl(
             controller: _tabController,
-            selectedColor: ColorUtils.colorPrimary, // Using the primary pink color
+            selectedColor:
+                ColorUtils.colorPrimary, // Using the primary pink color
             unselectedColor: Colors.transparent,
             titles: const ["Doctors", "Reports"],
           ),
@@ -450,6 +607,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       ),
     );
   }
+
   Widget _buildDoctorsTab() {
     if (_isLoadingDoctors) {
       return const Center(child: CircularProgressIndicator());
@@ -465,12 +623,10 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
     /// FILTERED LIST
     List<ConsultDoctorItem> filteredDoctors = _doctors.where((doctor) {
-
       final specialization =
           doctor.healthExpert?.specialization?.toLowerCase() ?? "";
 
-      final name =
-          doctor.healthExpert?.displayName?.toLowerCase() ?? "";
+      final name = doctor.healthExpert?.displayName?.toLowerCase() ?? "";
 
       final matchesCategory = _selectedCategory == "All" ||
           specialization.contains(_selectedCategory.toLowerCase());
@@ -478,14 +634,13 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       final matchesSearch = name.contains(_searchQuery);
 
       return matchesCategory && matchesSearch;
-
     }).toList();
 
     return Column(
       children: [
-
         /// SEARCH BAR
         _buildSearchBar(),
+
         /// CATEGORY FILTER
         _buildCategoryFilter(),
 
@@ -505,8 +660,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          DoctorDetailScreen(doctor: doc),
+                      builder: (_) => DoctorDetailScreen(doctor: doc),
                     ),
                   );
                 },
@@ -517,10 +671,204 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       ],
     );
   }
+  Duration getRemainingTime(String createdAt) {
+    DateTime created = DateTime.parse(createdAt).toLocal();
+    DateTime expiry = created.add(Duration(hours: 72));
+    return expiry.difference(DateTime.now());
+  }
 
+  bool isFollowUpActive(String createdAt) {
+    return getRemainingTime(createdAt).inSeconds > 0;
+  }
+
+  String formatDuration(Duration d) {
+    if (d.isNegative) return "Follow-up closed";
+
+    int h = d.inHours;
+    int m = d.inMinutes % 60;
+
+    return "Follow-up available for ${h}h ${m}m";
+  }
   /// ============================
   /// REPORTS TAB
   /// ============================
+  Widget premiumReportCard(MyConsultationModel item) {
+    final remaining = getRemainingTime(item.createdAt);
+    final isActive = isFollowUpActive(item.createdAt);
+
+    DateTime parsedDate = DateTime.parse(item.createdAt).toLocal();
+
+    String formattedDate =
+    DateFormat('dd MMM yyyy, hh:mm a').format(parsedDate);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: const Color(0xFFF7F3FA),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          /// 🔝 HEADER
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundImage: item.doctorImage != null
+                    ? NetworkImage(item.doctorImage!)
+                    : null,
+                child: item.doctorImage == null
+                    ? const Icon(Icons.person)
+                    : null,
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Dr. ${item.doctorName}",
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+
+                    Text(
+                      item.specialization ?? "",
+                      style: const TextStyle(
+                        color: Colors.purple,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+
+                    if (item.career != null)
+                      Text(
+                        item.career!,
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.grey),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          /// 📅 DATE
+          Row(
+            children: [
+              const Icon(Icons.calendar_today, size: 14),
+              const SizedBox(width: 6),
+              Text(formattedDate),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          Text("ID: CLR-${item.id}"),
+
+          const SizedBox(height: 12),
+
+          /// ⏱ FOLLOW-UP
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.access_time, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(formatDuration(remaining)),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          /// 🔘 BUTTONS
+          Row(
+            children: [
+
+              /// DOWNLOAD
+              Expanded(
+                child: InkWell(
+                  onTap: item.pdfPath != null
+                      ? () => downloadPrescription(item.pdfPath!)
+                      : null,
+                  borderRadius: BorderRadius.circular(30),
+                  child: Ink(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: item.pdfPath != null
+                          ? Colors.white
+                          : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.download,
+                          size: 18,
+                          color: item.pdfPath != null
+                              ? Colors.black87
+                              : Colors.grey,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Download\nPrescription",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: item.pdfPath != null
+                                ? Colors.black87
+                                : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              /// FOLLOW-UP
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: isActive ? () {} : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple.shade200,
+                  ),
+                  child: Text(
+                    isActive ? "Request Follow-up" : "Follow-up Closed",
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildReportsTab() {
     if (_isLoadingReports) {
@@ -540,231 +888,10 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
       padding: const EdgeInsets.all(16),
       itemCount: _consultations.length,
       itemBuilder: (context, index) {
-        final item = _consultations[index];
-
-        /// ------------------ DATE (IST) ------------------
-        DateTime parsedDate = DateTime.parse(item.createdAt).toUtc();
-        DateTime indianTime =
-        parsedDate.add(const Duration(hours: 5, minutes: 30));
-        String formattedDate =
-        DateFormat('dd MMM yyyy • hh:mm a').format(indianTime);
-
-        /// ------------------ STATUS ------------------
-        bool isActive =
-            item.status.toLowerCase() == "active";
-
-        Color statusColor;
-        String statusText;
-
-        switch (item.status.toLowerCase()) {
-          case 'active':
-            statusColor = Colors.green;
-            statusText = "Active";
-            break;
-          case 'completed':
-            statusColor = Colors.blue;
-            statusText = "Completed";
-            break;
-          case 'pending':
-            statusColor = Colors.orange;
-            statusText = "Pending";
-            break;
-          case 'cancelled':
-            statusColor = Colors.red;
-            statusText = "Cancelled";
-            break;
-          default:
-            statusColor = Colors.grey;
-            statusText = item.status;
-        }
-
-        return InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ConsultationDetailScreen(
-                    consultation: item,
-                  ),
-                ),
-              );
-            },
-            child:
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: isActive
-                    ? LinearGradient(
-                  colors: [
-                    ColorUtils.colorPrimary.withOpacity(0.10),
-                    Colors.white
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-                    : const LinearGradient(
-                  colors: [Colors.white, Colors.white],
-                ),
-                border: Border.all(
-                  color: isActive
-                      ? ColorUtils.colorPrimary
-                      : Colors.grey.shade200,
-                  width: isActive ? 1.5 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  /// TOP ROW
-                  Row(
-                    children: [
-
-                      /// IMAGE
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor:
-                        ColorUtils.colorPrimary.withOpacity(0.15),
-                        child: Icon(
-                          Icons.person,
-                          color: ColorUtils.colorPrimary,
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-
-                            /// NAME
-                            Text(
-                              item.doctorName,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15),
-                            ),
-
-                            const SizedBox(height: 2),
-
-                            /// DATE
-                            Text(
-                              formattedDate,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      /// STATUS
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          statusText,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  /// AMOUNT (NOW BELOW STATUS)
-                  Row(
-                    children: [
-                      const Icon(Icons.currency_rupee,
-                          size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.amount,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  /// ACTION BUTTONS
-                  Row(
-                    children: [
-
-                      /// VIEW
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.visibility),
-                          label: const Text("View"),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ConsultationDetailScreen(
-                                      consultation: item,
-                                    ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      /// CHAT (ONLY ACTIVE)
-                      if (isActive) ...[
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.chat),
-                            label: const Text("Chat"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                              ColorUtils.colorPrimary,
-                            ),
-                            onPressed: () {
-                              openConsultationChat(
-                                context: context,
-                                doctorId: item.doctorId,
-                                doctorName: item.doctorName,
-                              );
-                            },
-                          ),
-                        ),
-                      ]
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        );
+        return premiumReportCard(_consultations[index]);
       },
     );
   }
-
-
 }
 
 class ConsultationDetailScreen extends StatelessWidget {
@@ -777,15 +904,13 @@ class ConsultationDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     bool isActive = consultation.status.toLowerCase() == "active";
 
     DateTime parsedDate = DateTime.parse(consultation.createdAt).toUtc();
-    DateTime indianTime =
-    parsedDate.add(const Duration(hours: 5, minutes: 30));
+    DateTime indianTime = parsedDate.add(const Duration(hours: 5, minutes: 30));
 
     String formattedDate =
-    DateFormat('dd MMM yyyy • hh:mm a').format(indianTime);
+        DateFormat('dd MMM yyyy • hh:mm a').format(indianTime);
 
     Color statusColor;
 
@@ -816,7 +941,6 @@ class ConsultationDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               /// DOCTOR CARD
               Container(
                 padding: const EdgeInsets.all(18),
@@ -824,9 +948,8 @@ class ConsultationDetailScreen extends StatelessWidget {
                   color: Colors.white.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isActive
-                        ? ColorUtils.colorPrimary
-                        : Colors.transparent,
+                    color:
+                        isActive ? ColorUtils.colorPrimary : Colors.transparent,
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -838,11 +961,10 @@ class ConsultationDetailScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-
                     CircleAvatar(
                       radius: 30,
                       backgroundColor:
-                      ColorUtils.colorPrimary.withOpacity(0.15),
+                          ColorUtils.colorPrimary.withOpacity(0.15),
                       child: Icon(
                         Icons.person,
                         color: ColorUtils.colorPrimary,
@@ -855,7 +977,6 @@ class ConsultationDetailScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
                           Text(
                             consultation.doctorName,
                             style: const TextStyle(
@@ -863,9 +984,7 @@ class ConsultationDetailScreen extends StatelessWidget {
                               fontSize: 17,
                             ),
                           ),
-
                           const SizedBox(height: 4),
-
                           Text(
                             formattedDate,
                             style: const TextStyle(
@@ -918,32 +1037,24 @@ class ConsultationDetailScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-
                     Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("Date"),
                         Text(formattedDate),
                       ],
                     ),
-
                     const SizedBox(height: 10),
-
                     Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("Amount"),
                         Text("₹${consultation.amount}"),
                       ],
                     ),
-
                     const SizedBox(height: 10),
-
                     Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text("Status"),
                         Text(
@@ -978,9 +1089,8 @@ class ConsultationDetailScreen extends StatelessWidget {
                   icon: const Icon(Icons.chat),
                   label: const Text("Open Chat"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isActive
-                        ? ColorUtils.colorPrimary
-                        : Colors.grey,
+                    backgroundColor:
+                        isActive ? ColorUtils.colorPrimary : Colors.grey,
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -988,12 +1098,12 @@ class ConsultationDetailScreen extends StatelessWidget {
                   ),
                   onPressed: isActive
                       ? () {
-                    openConsultationChat(
-                      context: context,
-                      doctorId: consultation.doctorId,
-                      doctorName: consultation.doctorName,
-                    );
-                  }
+                          openConsultationChat(
+                            context: context,
+                            doctorId: consultation.doctorId,
+                            doctorName: consultation.doctorName,
+                          );
+                        }
                       : null,
                 ),
               ),
@@ -1003,7 +1113,6 @@ class ConsultationDetailScreen extends StatelessWidget {
               /// PRESCRIPTION
               /// PRESCRIPTION
               if (consultation.pdfPath != null) ...[
-
                 const Text(
                   "Prescription",
                   style: TextStyle(
@@ -1011,9 +1120,7 @@ class ConsultationDetailScreen extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1022,18 +1129,14 @@ class ConsultationDetailScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-
                       Row(
                         children: [
-
                           const Icon(
                             Icons.picture_as_pdf,
                             color: Colors.red,
                             size: 28,
                           ),
-
                           const SizedBox(width: 10),
-
                           const Expanded(
                             child: Text(
                               "Doctor Prescription",
@@ -1042,22 +1145,17 @@ class ConsultationDetailScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-
                         ],
                       ),
-
                       const SizedBox(height: 12),
-
                       Row(
                         children: [
-
                           /// OPEN
                           Expanded(
                             child: OutlinedButton.icon(
                               icon: const Icon(Icons.visibility),
                               label: const Text("View"),
                               onPressed: () async {
-
                                 final url = consultation.pdfPath!;
 
                                 if (await canLaunchUrl(Uri.parse(url))) {
@@ -1066,7 +1164,6 @@ class ConsultationDetailScreen extends StatelessWidget {
                                     mode: LaunchMode.externalApplication,
                                   );
                                 }
-
                               },
                             ),
                           ),
@@ -1082,7 +1179,6 @@ class ConsultationDetailScreen extends StatelessWidget {
                                 backgroundColor: ColorUtils.colorPrimary,
                               ),
                               onPressed: () async {
-
                                 final url = consultation.pdfPath!;
 
                                 if (await canLaunchUrl(Uri.parse(url))) {
@@ -1091,18 +1187,14 @@ class ConsultationDetailScreen extends StatelessWidget {
                                     mode: LaunchMode.externalApplication,
                                   );
                                 }
-
                               },
                             ),
                           ),
-
                         ],
                       )
-
                     ],
                   ),
                 ),
-
               ],
 
               const SizedBox(height: 24),
@@ -1120,7 +1212,6 @@ class ConsultationDetailScreen extends StatelessWidget {
 
               /// FEEDBACK (Only when consultation completed)
               if (consultation.status.toLowerCase() == "completed") ...[
-
                 const Text(
                   "Feedback",
                   style: TextStyle(
@@ -1128,11 +1219,8 @@ class ConsultationDetailScreen extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 _RatingCard(),
-
               ],
             ],
           ),
@@ -1150,15 +1238,12 @@ class _RatingCard extends StatefulWidget {
 }
 
 class _RatingCardState extends State<_RatingCard> {
-
   double rating = 0;
 
   Widget star(int index) {
     return IconButton(
       icon: Icon(
-        index < rating
-            ? Icons.star
-            : Icons.star_border,
+        index < rating ? Icons.star : Icons.star_border,
         color: Colors.orange,
         size: 32,
       ),
@@ -1172,7 +1257,6 @@ class _RatingCardState extends State<_RatingCard> {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1181,21 +1265,16 @@ class _RatingCardState extends State<_RatingCard> {
       ),
       child: Column(
         children: [
-
           const Text(
             "Rate your consultation",
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-
           const SizedBox(height: 10),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (i) => star(i)),
           ),
-
           const SizedBox(height: 12),
-
           if (rating > 0)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -1206,13 +1285,11 @@ class _RatingCardState extends State<_RatingCard> {
                 ),
               ),
               onPressed: () {
-
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text("Rating submitted: $rating ⭐"),
                   ),
                 );
-
               },
               child: const Text("Submit Rating"),
             )
@@ -1251,28 +1328,26 @@ class DoctorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           /// 🔹 TOP ROW
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               /// IMAGE
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: imageUrl.isNotEmpty
                     ? Image.network(
-                  imageUrl,
-                  height: 60,
-                  width: 60,
-                  fit: BoxFit.cover,
-                )
+                        imageUrl,
+                        height: 60,
+                        width: 60,
+                        fit: BoxFit.cover,
+                      )
                     : Container(
-                  height: 60,
-                  width: 60,
-                  color: Colors.white,
-                  child: const Icon(Icons.person),
-                ),
+                        height: 60,
+                        width: 60,
+                        color: Colors.white,
+                        child: const Icon(Icons.person),
+                      ),
               ),
 
               const SizedBox(width: 12),
@@ -1282,7 +1357,6 @@ class DoctorCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     /// NAME + RATING
                     Row(
                       children: [
@@ -1339,7 +1413,7 @@ class DoctorCard extends StatelessWidget {
 
                     /// EDUCATION + EXPERIENCE
                     Text(
-                      "${doctor!.qualification ?? ""} - ${doctor!.experience ?? 0} yrs exp",
+                      "${(doctor!.qualification ?? "").replaceAll(RegExp(r'<[^>]*>'), '')} - ${doctor!.experience ?? 0} yrs exp",
                       style: const TextStyle(
                         fontSize: 14,
                         color: Colors.black54,
@@ -1351,7 +1425,6 @@ class DoctorCard extends StatelessWidget {
                     /// LOCATION + PRICE
                     Row(
                       children: [
-
                         /// LOCATION
                         Expanded(
                           child: Row(
@@ -1445,7 +1518,6 @@ class DoctorCard extends StatelessWidget {
     );
   }
 }
-
 
 // --- SCREEN: DOCTOR DETAIL ---
 class DoctorDetailScreen extends StatefulWidget {
@@ -1559,7 +1631,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
         print("CREATE ORDER RESPONSE: $decoded");
 
         if (decoded['status'] == true) {
-
           final data = decoded['data'];
 
           final orderId = data['order_id']?.toString();
@@ -1571,13 +1642,12 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
             _orderId = orderId;
             _openRazorpayCheckout(finalAmount, patientStreamId, doctorId);
           } else {
-            throw Exception('Order creation failed: Missing order_id or amount.');
+            throw Exception(
+                'Order creation failed: Missing order_id or amount.');
           }
-
         } else {
           throw Exception(decoded['message'] ?? 'Order creation failed');
         }
-
       } else {
         throw Exception(
             'Backend returned status ${response.statusCode}: ${response.body}');
@@ -1655,29 +1725,22 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
       );
 
       if (verifyResponse.statusCode == 200) {
-
         final verificationData = jsonDecode(verifyResponse.body);
 
         print("VERIFY RESPONSE: $verificationData");
 
         if (verificationData['success'] == true) {
-
           openConsultationChat(
             context: context,
             doctorId: doctorId,
             doctorName: widget.doctor.displayName ?? 'Doctor',
           );
-
-
         } else {
           throw Exception(verificationData['message'] ?? 'Verification failed');
         }
-
       } else {
-        throw Exception(
-            'Verification API error: ${verifyResponse.statusCode}');
+        throw Exception('Verification API error: ${verifyResponse.statusCode}');
       }
-
     } catch (e) {
       _handlePaymentError('Verification Failed: $e');
     } finally {
@@ -1831,59 +1894,150 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
   }
 
   Widget _buildDoctorHeader() {
-    return GlassContainer(
-      // 2️⃣ Replaced Card with GlassContainer
-      borderRadius: 20.0,
-      baseColor:
-          ColorUtils.PRIMARY_CREAM.withOpacity(0.4), // Cream base for card
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor:
-                  Colors.white.withOpacity(0.4), // Translucent white
-              child: Icon(Icons.person,
-                  color: ColorUtils.colorPrimary.withOpacity(0.8)),
-            ),
-            SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.doctor.displayName ?? 'Doctor Unknown',
-                    style: boldTextStyle(
-                        color: Colors.black.withOpacity(0.8), size: 20),
-                  ),
-                  Text(
-                    widget.doctor.tagLine ?? 'General Practitioner',
-                    style: secondaryTextStyle(
-                        color: Colors.black.withOpacity(0.6), size: 14),
-                  ),
-                ],
-              ),
-            ),
+    final image = widget.doctor.healthExpertsImage ?? "";
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFEADCF8),
+            Color(0xFFF8F5FF),
           ],
         ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          /// 🔥 PROFILE IMAGE
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: image.isNotEmpty
+                ? Image.network(
+                    image,
+                    height: 85,
+                    width: 85,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _fallbackAvatar(),
+                  )
+                : _fallbackAvatar(),
+          ),
+
+          const SizedBox(width: 16),
+
+          /// 🔥 INFO
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// NAME
+                Text(
+                  "Dr. ${widget.doctor.displayName ?? ""}",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                /// SPECIALIZATION
+                Text(
+                  widget.doctor.tagLine ?? "",
+                  style: const TextStyle(
+                    color: Color(0xFF7B3FE4),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                /// EXPERIENCE
+                Text(
+                  "${widget.doctor.experience ?? 0} yrs experience",
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 13,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                /// ⭐ RATING
+                if ((widget.doctor.averageRating ?? 0) > 0)
+                  Row(
+                    children: [
+                      const Icon(Icons.star, size: 16, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text("${widget.doctor.averageRating}"),
+                      const SizedBox(width: 4),
+                      Text(
+                        "(${widget.doctor.totalReviews ?? 0})",
+                        style: const TextStyle(
+                            color: Colors.black45, fontSize: 12),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDetailSection(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title,
-              style: secondaryTextStyle(
-                  color: Colors.black.withOpacity(0.7), size: 16)),
-          Text(value,
-              style: primaryTextStyle(
-                  color: Colors.black.withOpacity(0.8), size: 16)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 14,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _fallbackAvatar() {
+    return Container(
+      height: 85,
+      width: 85,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(
+        Icons.person,
+        size: 40,
+        color: Colors.grey,
       ),
     );
   }
@@ -1893,7 +2047,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
     print("isLoggedIn: ${userStore.isLoggedIn}");
     print("StreamUserId: ${client.state.currentUser?.id}");
     print("_isProcessingPayment: $_isProcessingPayment");
-
 
     final isReadyForPayment = userStore.isLoggedIn &&
         client.state.currentUser?.id != null &&
@@ -1937,7 +2090,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen>
 // NOTE: Final adjustments made for v1.4.0 compatibility in event registration.
 
 void startAudioCall({required String doctorId}) async {
-
   if (streamVideo == null) return;
 
   final currentUserId = client.state.currentUser?.id;
@@ -1968,7 +2120,6 @@ void startAudioCall({required String doctorId}) async {
 }
 
 void startVideoCall({required String doctorId}) async {
-
   if (streamVideo == null) return;
 
   final currentUserId = client.state.currentUser?.id;
@@ -2019,7 +2170,8 @@ class _ConsultSegmentControl extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5), // Background for the unselected state, similar to dashboard pill background
+        color: Colors.white.withOpacity(
+            0.5), // Background for the unselected state, similar to dashboard pill background
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: Colors.white.withOpacity(0.7)),
       ),

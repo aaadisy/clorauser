@@ -127,53 +127,68 @@ class _NewSplashScreenState extends State<NewSplashScreen> with TickerProviderSt
     // Add listener to navigate after animation completes
     _controller.addStatusListener((status) async {
       if (status == AnimationStatus.completed) {
+        //await debugStorageData();
         await _checkSessionAndNavigate(context);
       }
     });
   }
 
   Future<void> _checkSessionAndNavigate(BuildContext context) async {
-    // Check for session status using keys from app_constants.dart
-    final bool? isLoggedIn = await getBoolAsync(IS_LOGIN);
-    final String? token = await getStringAsync(TOKEN);
-    final bool? profileCompleted = await getBoolAsync('profile_completed'); // Assuming profile status is also stored if needed for initial check
+    final bool isLoggedIn = await getBoolAsync(IS_LOGIN) ?? false;
+    final String token = await getStringAsync(TOKEN) ?? "";
+    final String profileCompleted =
+        await getStringAsync("PROFILE_COMPLETED") ?? "0";
 
-    // For safety, check if token exists AND IS_LOGIN is true
-    final isUserLoggedIn = isLoggedIn == true && token != null && token.isNotEmpty;
-    
-    if (isUserLoggedIn) {
-      // If logged in, check profile completion status (using '1' for true/completed like in auth_flow_service.dart)
-      final String? profileStatus = await getStringAsync('profile_completed'); // Using getStringAsync if profile_completed is stored as string '0' or '1'
+    final isUserLoggedIn = isLoggedIn && token.isNotEmpty;
 
-      if (profileStatus == '1') {
-        // 👉 COMPLETED USER: Redirect to DashboardScreen
-        // Use isNewTask: true to ensure it replaces the splash screen stack
-        // DashboardScreen(currentIndex: 0).launch(context, isNewTask: true); 
-        // Since launch is not available here, use Navigator.pushReplacement
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DashboardScreen(currentIndex: 0),
-            ),
-          );
-      } else {
-        // 👉 NEW/INCOMPLETE USER or token is valid but profile is incomplete: Redirect to Onboarding
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AiOnboardingScreen(isFromLogin: true), // Reusing logic from auth_flow_service.dart for incomplete user
-          ),
-        );
-      }
-    } else {
-      // 👉 NOT LOGGED IN: Redirect to Sign In Screen
+    /// ❌ NOT LOGIN
+    if (!isUserLoggedIn) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => UserSignInScreen()), // Removed const for async widget
+        MaterialPageRoute(builder: (_) => UserSignInScreen()),
       );
+      return;
     }
-  }
 
+    /// 🔥 LOGIN BUT PROFILE NOT COMPLETE
+    if (profileCompleted == "0") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AiOnboardingScreen(isFromLogin: true),
+        ),
+      );
+      return;
+    }
+
+    /// ✅ LOGIN + PROFILE COMPLETE
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DashboardScreen(currentIndex: 0),
+      ),
+    );
+  }
+  Future<void> debugStorageData() async {
+    print("🧠 ================= STORAGE DEBUG START =================");
+
+    final isLogin = await getBoolAsync(IS_LOGIN);
+    final token = await getStringAsync(TOKEN);
+    final profileCompleted = await getStringAsync("PROFILE_COMPLETED");
+    final userId = await getStringAsync("USER_ID");
+
+    print("🔐 IS_LOGIN: $isLogin");
+    print("🔑 TOKEN: $token");
+    print("👤 USER_ID: $userId");
+    print("📊 PROFILE_COMPLETED: $profileCompleted");
+
+    /// Extra useful keys
+    print("🎯 GOAL: ${getIntAsync(GOAL)}");
+    print("📅 CURRENT_USER_CYCLE_DAY: ${getIntAsync(CURRENT_USER_CYCLE_DAY)}");
+    print("🤰 CURRENT_USER_PREGNANCY_WEEK: ${getIntAsync(CURRENT_USER_PREGNANCY_WEEK)}");
+
+    print("🧠 ================= STORAGE DEBUG END =================");
+  }
 
   @override
   void dispose() {

@@ -12,6 +12,7 @@ import 'package:clora_user/screens/user/reminders/cycle_reminder_screen.dart';
 import 'package:clora_user/screens/user/reminders/deafult_reminder_setting_screen.dart';
 import 'package:clora_user/screens/user/reminders/secret_reminder_screen.dart';
 import 'package:clora_user/screens/user/secret_chat_screen.dart';
+import 'package:clora_user/screens/user/sign_in_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -198,18 +199,44 @@ class _SettingScreenState extends State<SettingScreen> {
               SizedBox(height: 20),
 
               /// 🔹 Logout
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    "Logout",
-                    style: TextStyle(
-                        color: Colors.red, fontWeight: FontWeight.bold),
+              GestureDetector(
+                onTap: () async {
+
+                  /// 🔥 CLEAR ALL DATA
+                  await setValue(IS_LOGIN, false);
+                  await setValue(TOKEN, "");
+                  await setValue("PROFILE_COMPLETED", "0");
+                  userStore.setLogin(false);
+
+                  /// 🔥 DISCONNECT STREAM
+                  try {
+                    await client.disconnectUser();
+                  } catch (e) {
+                    print("Stream disconnect error: $e");
+                  }
+
+                  /// 🔥 NAVIGATE TO LOGIN
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => UserSignInScreen()),
+                        (route) => false,
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      "Logout",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),

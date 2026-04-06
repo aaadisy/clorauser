@@ -1,7 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:clora_user/screens/consult/consult_now_screen.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class HomeActionGrid extends StatelessWidget {
   const HomeActionGrid({Key? key}) : super(key: key);
@@ -9,7 +8,7 @@ class HomeActionGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+      padding: const EdgeInsets.all(16.0),
 
       child: GridView.count(
         shrinkWrap: true,
@@ -17,105 +16,137 @@ class HomeActionGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 2.2,
+        childAspectRatio: 1,
 
         children: [
-          _buildGlassCard(
+
+          /// BOOK APPOINTMENT
+          _buildImageCard(
             context,
-            icon: Icons.calendar_month,
-            title: "Book\nAppointment",
+            image: "assets/home/book.jpeg",
+            title: "Book Appointment",
+            subtitle: "Book doctor visits",
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ConsultNowScreen()),
             ),
           ),
-          _buildGlassCard(
+
+          /// SHOP
+          _buildImageCard(
             context,
-            icon: Icons.shopping_bag_outlined,
-            title: "Shop",
-            onTap: () => _openWebView(context, "https://shop.getclora.com/", "Shop"),
+            image: "assets/home/shop.jpeg",
+            title: "Shop Now",
+            subtitle: "Curated wellness store",
+            onTap: () => _openWebView(
+              context,
+              "https://shop.getclora.com/",
+              "Shop",
+            ),
           ),
-          _buildGlassCard(
+
+          /// ORDER MEDICINE
+          _buildImageCard(
             context,
-            icon: Icons.shopping_cart_outlined,
-            title: "Order\nMedicine",
-            onTap: () => _openWebView(context, "https://pharmeasy.in/", "Order Medicine"),
+            image: "assets/home/order.jpeg",
+            title: "Order Medicine",
+            subtitle: "Get meds at home",
+            onTap: () => _openWebView(
+              context,
+              "https://pharmeasy.in/",
+              "Order Medicine",
+            ),
           ),
-          _buildGlassCard(
+
+          /// DIAGNOSTIC
+          _buildImageCard(
             context,
-            icon: Icons.science_outlined,
-            title: "Diagnostic\nTests",
-            onTap: () => _openWebView(context, "https://pharmeasy.in/diagnostics?src=homecard", "Diagnostic Tests"),
+            image: "assets/home/diagnostic.jpeg",
+            title: "Diagnostic Tests",
+            subtitle: "Book lab tests",
+            onTap: () => _openWebView(
+              context,
+              "https://pharmeasy.in/diagnostics?src=homecard",
+              "Diagnostic Tests",
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// 🔥 GLASS CARD
-  Widget _buildGlassCard(
+  /// 🔥 IMAGE CARD (MAIN UI)
+  Widget _buildImageCard(
       BuildContext context, {
-        required IconData icon,
+        required String image,
         required String title,
+        required String subtitle,
         required VoidCallback onTap,
       }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
 
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
 
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Stack(
+          children: [
 
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-
-              /// 🔥 SAME GLASS STYLE
-              color: Colors.white.withOpacity(0.25),
-
-              border: Border.all(
-                color: Colors.white.withOpacity(0.35),
+            /// BACKGROUND IMAGE
+            Positioned.fill(
+              child: Image.asset(
+                image,
+                fit: BoxFit.cover,
               ),
             ),
 
-            child: Row(
-              children: [
-
-                /// ICON BOX
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: const Color(0xFFEC4899),
-                    size: 20,
+            /// DARK GRADIENT OVERLAY
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.6),
+                      Colors.black.withOpacity(0.2),
+                    ],
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
                   ),
                 ),
+              ),
+            ),
 
-                const SizedBox(width: 12),
+            /// TEXT
+            Positioned(
+              left: 16,
+              bottom: 16,
+              right: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
 
-                /// TEXT
-                Expanded(
-                  child: Text(
+                  Text(
                     title,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 2,
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -176,7 +207,6 @@ class _GenericWebViewScreenState
         children: [
           WebViewWidget(controller: _controller),
 
-          /// LOADER
           if (_isLoading)
             const Center(child: CircularProgressIndicator()),
         ],

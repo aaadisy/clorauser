@@ -1,8 +1,17 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:clora_user/service/firebase_auth_service.dart';
+import '../../service/auth_flow_service.dart';
 import 'otp_screen.dart';
 import 'package:clora_user/utils/app_images.dart';
+import 'package:clora_user/utils/app_common.dart'; // 🔥 for toast
+import 'package:clora_user/utils/app_constants.dart';
+import 'package:clora_user/store/userStore/user_store.dart';
+import 'package:clora_user/network/rest_api.dart';
+import 'package:clora_user/main.dart';
+import 'package:clora_user/extensions/shared_pref.dart';
+
+import 'dart:ui';
 
 class PhoneLoginScreen extends StatefulWidget {
   @override
@@ -13,12 +22,10 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
   final TextEditingController phoneController = TextEditingController();
   final FirebaseAuthService _authService = FirebaseAuthService();
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: Stack(
         children: [
           Positioned(
@@ -31,17 +38,14 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
             right: -50,
             child: _bgCircle(Colors.pink.shade400),
           ),
-
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   const SizedBox(height: 20),
 
-                  /// 🔙 BACK
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Icon(Icons.arrow_back_ios_new),
@@ -49,7 +53,6 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
 
                   const SizedBox(height: 20),
 
-                  /// 🔥 LOGO (NEW)
                   Center(
                     child: Image.asset(
                       ic_logo,
@@ -111,8 +114,17 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                   /// 🚀 BUTTON
                   GestureDetector(
                     onTap: () async {
+                      final phone = phoneController.text.trim();
+
+                      if (phone.isEmpty || phone.length < 10) {
+                        toast("Enter valid phone number");
+                        return;
+                      }
+
                       await _authService.sendOtp(
-                        phone: phoneController.text,
+                        phone: phone,
+
+                        /// 🔥 OTP SCREEN FLOW
                         onCodeSent: (verificationId) {
                           print("🔥 OTP SENT, ID: $verificationId");
 
@@ -121,8 +133,22 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                             MaterialPageRoute(
                               builder: (_) => OtpScreen(
                                 verificationId: verificationId,
+                                phone: phone, // 🔥 pass phone
                               ),
                             ),
+                          );
+                        },
+
+                        /// 🔥 AUTO LOGIN FLOW (IMPORTANT FIX)
+                        onAutoLogin: (user) async {
+                          print("⚡ AUTO LOGIN SUCCESS");
+
+                          await handleFirebaseLogin(
+                            context: context,
+                            uid: user.uid,
+                            phone: user.phoneNumber,
+                            email: user.email,
+                            name: user.displayName,
                           );
                         },
                       );

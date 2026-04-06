@@ -4,10 +4,18 @@ import 'package:google_sign_in/google_sign_in.dart';
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 🔥 GOOGLE LOGIN
+  /// 🔥 COMMON: WAIT FOR STABLE USER
+  Future<User?> _getStableUser() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _auth.currentUser?.reload();
+    return _auth.currentUser;
+  }
+
+// =========================
+// 🔥 GOOGLE LOGIN
+// =========================
   Future<User?> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser =
-    await GoogleSignIn().signIn();
+    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
     if (googleUser == null) return null;
 
@@ -18,37 +26,42 @@ class FirebaseAuthService {
       idToken: googleAuth.idToken,
     );
 
-    final userCredential =
     await _auth.signInWithCredential(credential);
 
-    return userCredential.user;
+    return await _getStableUser();
   }
 
-  // 🔥 SEND OTP
+// =========================
+// 🔥 SEND OTP
+// =========================
   Future<void> sendOtp({
     required String phone,
     required Function(String verificationId) onCodeSent,
+    required Function(User user) onAutoLogin,
   }) async {
     await _auth.verifyPhoneNumber(
       phoneNumber: '+91$phone',
-
       verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-      },
+        final result = await _auth.signInWithCredential(credential);
+        final user = await _getStableUser();
 
+        if (user != null) {
+          onAutoLogin(user);
+        }
+      },
       verificationFailed: (FirebaseAuthException e) {
-        print("OTP Error: ${e.message}");
+        print("❌ OTP Error: ${e.message}");
       },
-
       codeSent: (String verificationId, int? resendToken) {
         onCodeSent(verificationId);
       },
-
       codeAutoRetrievalTimeout: (String verificationId) {},
     );
   }
 
-  // 🔥 VERIFY OTP
+// =========================
+// 🔥 VERIFY OTP
+// =========================
   Future<User?> verifyOtp({
     required String verificationId,
     required String otp,
@@ -58,8 +71,8 @@ class FirebaseAuthService {
       smsCode: otp,
     );
 
-    final result = await _auth.signInWithCredential(credential);
+    await _auth.signInWithCredential(credential);
 
-    return result.user;
+    return await _getStableUser();
   }
 }
