@@ -257,7 +257,9 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
         print("Saved at: $filePath");
 
         // ❌ OPEN नहीं करना (as per your requirement)
-        // OpenFile.open(filePath);
+        final result = await OpenFile.open(filePath);
+
+        print("📂 Open result: ${result.message}");
       } else {
         toast("Download failed");
       }
@@ -808,7 +810,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
 
   Duration getRemainingTime(String createdAt) {
     DateTime created = DateTime.parse(createdAt).toLocal();
-    DateTime expiry = created.add(Duration(hours: 72));
+    DateTime expiry = created.add(Duration(hours: 48));
     return expiry.difference(DateTime.now());
   }
 
@@ -931,7 +933,7 @@ class _ConsultNowScreenState extends State<ConsultNowScreen>
                       ),
                     ),
 
-                    if (item.career != null)
+                    if (item.career != item.specialization)
                       Text(
                         item.career!,
                         style:
